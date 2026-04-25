@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const mysql2 = require('mysql2');
 
 const DB_NAME = process.env.DB_NAME;
 const DB_USER = process.env.DB_USER;
@@ -11,6 +12,7 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
     host: DB_HOST,
     port: DB_PORT,
     dialect: 'mysql',
+    dialectModule: mysql2,
     logging: DB_LOG_SQL ? (sql) => console.log(`[Sequelize SQL] ${sql}`) : false,
     pool: {
         max: 10,
