@@ -1,0 +1,131 @@
+{
+  "name": "Doctor Appointment Chatbot (Dynamic Slots)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e3b3e3e3-e3e3-e3e3-e3e3-e3e3e3e3e3e3",
+      "name": "When chat message received",
+      "type": "n8n-nodes-base.chatTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/slots",
+        "options": {}
+      },
+      "id": "f5e6d7c8-b9a0-1234-5678-90abcdef1234",
+      "name": "Get Available Slots",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.message}}",
+        "options": {
+          "systemMessage": "You are a helpful assistant for 'HealthCare Clinic'. \n\nDynamic Context:\nAvailable Slots: {{$node[\"Get Available Slots\"].json.filter(s => s.available).map(s => s.time).join(', ')}}\n\nFlow Instructions:\n1. Welcome: Greet the user.\n2. Collect Name: Ask for patient name.\n3. Show Slots: Show ONLY the available slots mentioned above.\n4. Selection: Confirm the user's choice.\n5. Confirmation: Finalize the booking."
+        }
+      },
+      "id": "a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6",
+      "name": "AI Agent",
+      "type": "n8n-nodes-base.aiAgent",
+      "typeVersion": 1,
+      "position": [
+        450,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-chat",
+        "options": {
+          "baseUrl": "https://openrouter.ai/api/v1"
+        }
+      },
+      "id": "b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7",
+      "name": "OpenRouter Model (DeepSeek)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        350,
+        400
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d4e5f6g7-h8i9-j0k1-l2m3-n4o5p6q7r8s9",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [
+        550,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Get Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Available Slots": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Model (DeepSeek)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dynamic-slots-v1",
+  "id": "1",
+  "meta": {
+    "templateId": "doctor-appointment-dynamic"
+  }
+}
