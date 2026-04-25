@@ -1,0 +1,13 @@
+{
+  "name": "chatbot-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "mysql2": "^3.22.2",
+    "sequelize": "^6.37.8",
+    "express": "^5.2.1",
+    "cors": "^2.8.6",
+    "body-parser": "^2.2.2",
+    "dotenv": "^17.4.2"
+  }
+}
