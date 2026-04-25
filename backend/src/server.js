@@ -26,13 +26,16 @@ app.use('/api', routes);
 async function startServer() {
     try {
         await syncAndSeed();
-        app.listen(PORT, () => {
-            console.log(`Backend running on http://localhost:${PORT}`);
-        });
+        if (process.env.NODE_ENV !== 'production') {
+            app.listen(PORT, () => {
+                console.log(`Backend running on http://localhost:${PORT}`);
+            });
+        }
     } catch (error) {
         console.error('Failed to start server:', error.message);
-        process.exit(1);
     }
 }
 
 startServer();
+
+module.exports = app;
