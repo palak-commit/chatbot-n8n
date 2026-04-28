@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../lib/api';
 
 const AUTH_KEY = 'doctorAuth';
@@ -21,11 +21,6 @@ function DoctorSlotPage() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
-  useEffect(() => {
-    if (isLoggedIn) loadSlots();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
-
   const handleLogout = () => {
     localStorage.removeItem(AUTH_KEY);
     setIsLoggedIn(false);
@@ -34,12 +29,12 @@ function DoctorSlotPage() {
     setPassword('');
   };
 
-  const showMessage = (text, error = false) => {
+  const showMessage = useCallback((text, error = false) => {
     setMessage(text);
     setIsError(error);
-  };
+  }, []);
 
-  const loadSlots = async () => {
+  const loadSlots = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/slots`);
       const data = await res.json();
@@ -47,7 +42,15 @@ function DoctorSlotPage() {
     } catch {
       showMessage('Slots load nathi thata', true);
     }
-  };
+  }, [showMessage]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return undefined;
+    const timeoutId = setTimeout(() => {
+      void loadSlots();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [isLoggedIn, loadSlots]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
