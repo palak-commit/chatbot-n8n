@@ -16,20 +16,19 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/src/server.js"
+      "dest": "/backend/src/server.js"
     },
     {
       "src": "/test",
-      "dest": "backend/src/server.js"
+      "dest": "/backend/src/server.js"
     },
     {
       "src": "/",
-      "dest": "backend/src/server.js"
+      "dest": "/backend/src/server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1",
-      "continue": true
+      "dest": "/$1"
     }
   ]
 }
