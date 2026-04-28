@@ -19,13 +19,13 @@
       "dest": "backend/src/server.js"
     },
     {
-      "src": "/",
-      "dest": "backend/src/server.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "frontend/$1",
       "continue": true
+    },
+    {
+      "src": "/",
+      "dest": "backend/src/server.js"
     }
   ]
 }
