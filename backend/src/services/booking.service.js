@@ -8,6 +8,21 @@ function slotKey(date, time) {
     return `${normalize(date)}|${normalize(time)}`;
 }
 
+function splitDateTimeFromAppointment(appointmentDate, appointmentTime) {
+    let date = normalize(appointmentDate);
+    let time = normalize(appointmentTime);
+    const rawTime = String(appointmentTime || '').trim();
+
+    // Legacy records may store both date and time inside appointment_time.
+    const combinedMatch = rawTime.match(/^(\d{4}-\d{2}-\d{2})[t\s]+(.+)$/i);
+    if (!date && combinedMatch) {
+        date = normalize(combinedMatch[1]);
+        time = normalize(combinedMatch[2]);
+    }
+
+    return { date, time };
+}
+
 async function getAvailableSlots() {
     const slots = await Slot.findAll({
         where: { available: true },
@@ -20,19 +35,26 @@ async function getAvailableSlots() {
         attributes: ['appointmentDate', 'appointmentTime'],
     });
 
-    const bookedByDateAndTime = new Set(
-        bookedAppointments.map((appointment) => slotKey(appointment.appointmentDate, appointment.appointmentTime))
-    );
-    const bookedWithoutDate = new Set(
-        bookedAppointments
-            .filter((appointment) => !normalize(appointment.appointmentDate))
-            .map((appointment) => normalize(appointment.appointmentTime))
-    );
+    const bookedByDateAndTime = new Set();
+    const bookedWithoutDate = new Set();
+
+    for (const appointment of bookedAppointments) {
+        const { date, time } = splitDateTimeFromAppointment(
+            appointment.appointmentDate,
+            appointment.appointmentTime
+        );
+        if (!time) continue;
+        if (date) {
+            bookedByDateAndTime.add(slotKey(date, time));
+        } else {
+            bookedWithoutDate.add(time);
+        }
+    }
 
     const filteredSlots = slots.filter((slot) => {
         const dateTimeKey = slotKey(slot.date, slot.time);
         if (bookedByDateAndTime.has(dateTimeKey)) return false;
-        if (!normalize(slot.date) && bookedWithoutDate.has(normalize(slot.time))) return false;
+        if (bookedWithoutDate.has(normalize(slot.time))) return false;
         return true;
     });
 
