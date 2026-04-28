@@ -12,7 +12,7 @@ const PORT = Number(process.env.PORT || 3000);
 app.use(cors());
 app.use(bodyParser.json());
 
-app.get('/test', (req, res) => {
+app.get('/', (req, res) => {
     res.json({
         success: true,
         service: 'chatbot-backend',
