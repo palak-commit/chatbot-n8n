@@ -9,7 +9,7 @@ Appointment.belongsTo(Doctor, { foreignKey: 'doctorId' });
 async function syncAndSeed() {
     await sequelize.authenticate();
     console.log('[DB] Connected successfully');
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log('[DB] Models synced successfully');
 
     const [, created] = await Doctor.findOrCreate({
