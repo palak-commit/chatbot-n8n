@@ -29,6 +29,7 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
         memory: sessionMemory,
         knownPatientName: sessionMemory.patientName || '',
         knownSelectedTime: sessionMemory.selectedTime || '',
+        knownSelectedDate: sessionMemory.selectedDate || '',
     };
 
     const n8nResponse = await n8n.callWebhook(requestPayload);
@@ -56,6 +57,7 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
             || (isLikelyName(candidateName) ? candidateName : '')
             || '',
         selectedTime: payload.selectedTime || payload.booking?.time || memBefore.selectedTime || '',
+        selectedDate: payload.selectedDate || payload.booking?.date || memBefore.selectedDate || '',
     });
 
     const bookingInput = booking.resolveBookingFromPayload(
@@ -76,6 +78,7 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
             availableSlots,
             patientName: finalMemory.patientName || '',
             selectedTime: finalMemory.selectedTime || payload.selectedTime || '',
+            selectedDate: finalMemory.selectedDate || payload.selectedDate || '',
             memory: finalMemory,
             booking: bookingResult,
         },

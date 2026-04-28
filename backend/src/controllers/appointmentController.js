@@ -1,4 +1,4 @@
-const { Appointment, Doctor } = require('../models');
+const { Appointment, Doctor, Slot } = require('../models');
 
 exports.getAppointments = async (req, res) => {
     try {
@@ -26,10 +26,28 @@ exports.saveAppointment = async (req, res) => {
             return res.status(400).json({ success: false, message: 'patientName and appointmentTime are required' });
         }
 
+        const existing = await Appointment.findOne({
+            where: {
+                appointmentDate: appointmentDate || null,
+                appointmentTime,
+                status: 'confirmed',
+            },
+        });
+        if (existing) {
+            return res.status(409).json({ success: false, message: 'Selected slot already booked' });
+        }
+
         let resolvedDoctorId = doctorId;
         if (!resolvedDoctorId && doctorName) {
             const doctor = await Doctor.findOne({ where: { name: doctorName } });
             resolvedDoctorId = doctor ? doctor.id : null;
+        }
+
+        const slotWhere = { time: appointmentTime };
+        if (appointmentDate) slotWhere.date = appointmentDate;
+        const slot = await Slot.findOne({ where: slotWhere, order: [['id', 'ASC']] });
+        if (slot) {
+            await slot.update({ available: false });
         }
 
         const appointment = await Appointment.create({
