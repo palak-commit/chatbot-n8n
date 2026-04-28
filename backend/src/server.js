@@ -9,7 +9,14 @@ const { syncAndSeed } = require('./models');
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
-app.use(cors());
+app.use(
+    cors({
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+);
+app.options('*', cors());
 app.use(bodyParser.json());
 
 app.get('/', (req, res) => {
