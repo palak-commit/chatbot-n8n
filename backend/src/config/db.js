@@ -7,12 +7,21 @@ const DB_PASSWORD = process.env.DB_PASSWORD;
 const DB_HOST = process.env.DB_HOST;
 const DB_PORT = Number(process.env.DB_PORT);
 const DB_LOG_SQL = process.env.DB_LOG_SQL;
+const DB_SSL = process.env.DB_SSL !== 'false';
 
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
     host: DB_HOST,
     port: DB_PORT,
     dialect: 'mysql',
     dialectModule: mysql2,
+    dialectOptions: DB_SSL
+        ? {
+            ssl: {
+                minVersion: 'TLSv1.2',
+                rejectUnauthorized: true
+            }
+        }
+        : {},
     logging: DB_LOG_SQL ? (sql) => console.log(`[Sequelize SQL] ${sql}`) : false,
     pool: {
         max: 10,
