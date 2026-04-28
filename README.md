@@ -2,6 +2,10 @@
 
 A bilingual (English / Gujarati / Hinglish) doctor-appointment booking chatbot powered by an n8n AI workflow, with a React frontend and an Express + MySQL backend.
 
+## UI Screenshot
+
+![Doctor Appointment Chatbot UI](./frontend/src/assets/hero.png)
+
 ## Architecture
 
 ```
