@@ -57,6 +57,27 @@ npm run dev          # vite, port 5174
   Replace the tool URLs and the backend `FALLBACK_WEBHOOK_URL` accordingly.
 - Click **Publish** in n8n so the production webhook is live.
 
+## How AI Booking Works
+
+1. User sends a message from `/` (chat UI), for example: "Book appointment for 8 May at 5 PM".
+2. Frontend calls backend `POST /api/chat` with `message` + `sessionId`.
+3. Backend builds `BOOKING CONTEXT`:
+   - doctor info
+   - only currently available slots
+   - session memory (known patient name, selected date/time)
+4. Backend sends that payload to the n8n Booking Agent webhook.
+5. Booking Agent decides:
+   - ask missing details (name/time/date), or
+   - call `saveAppointment` tool when details are complete.
+6. On booking, backend validates slot availability and creates appointment.
+7. Booked slot is marked unavailable and removed from future available-slot responses.
+8. Backend returns final reply to frontend in user language (English / Gujarati / Hinglish).
+
+### Important Booking Rule
+
+- If a slot is already booked for a date+time, it is not shown again to new users.
+- Duplicate confirmed booking on same date+time is blocked.
+
 ## API
 
 | Method | Path                  | Purpose                                |
