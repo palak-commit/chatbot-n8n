@@ -8,6 +8,7 @@ const { syncAndSeed } = require('./models');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+let dbInitPromise = null;
 
 app.use(
     cors({
@@ -33,18 +34,35 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Test endpoint working' });
 });
 
-app.use('/api', routes);
-
-async function initializeDatabase() {
-    try {
-        await syncAndSeed();
-        console.log('[DB] Database initialized successfully');
-    } catch (error) {
-        console.error('[DB] Database initialization failed:', error.message);
+function ensureDatabaseInitialized() {
+    if (!dbInitPromise) {
+        dbInitPromise = syncAndSeed()
+            .then(() => {
+                console.log('[DB] Database initialized successfully');
+            })
+            .catch((error) => {
+                console.error('[DB] Database initialization failed:', error.message);
+                dbInitPromise = null;
+                throw error;
+            });
     }
+
+    return dbInitPromise;
 }
 
-initializeDatabase();
+app.use('/api', async (req, res, next) => {
+    try {
+        await ensureDatabaseInitialized();
+        next();
+    } catch {
+        res.status(500).json({ error: 'Database initialization failed' });
+    }
+});
+
+app.use('/api', routes);
+
+// Warm-up on cold start to reduce first API latency.
+ensureDatabaseInitialized().catch(() => {});
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
