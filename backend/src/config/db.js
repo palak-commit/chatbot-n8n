@@ -23,10 +23,21 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
         }
         : {},
     logging: DB_LOG_SQL ? (sql) => console.log(`[Sequelize SQL] ${sql}`) : false,
+    dialectOptions: DB_SSL
+        ? {
+            ssl: {
+                minVersion: 'TLSv1.2',
+                rejectUnauthorized: true
+            },
+            connectTimeout: 60000 // 60 seconds timeout
+        }
+        : {
+            connectTimeout: 60000
+        },
     pool: {
-        max: 10,
+        max: 5,
         min: 0,
-        acquire: 30000,
+        acquire: 60000,
         idle: 10000
     }
 });
