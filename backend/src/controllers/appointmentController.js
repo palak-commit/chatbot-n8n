@@ -55,12 +55,19 @@ exports.saveAppointment = async (req, res) => {
             if (dateMatch) finalDate = dateMatch[1];
         }
 
+        // Mark the slot as unavailable
         const slotWhere = { time: appointmentTime };
         if (finalDate) slotWhere.date = finalDate;
         if (resolvedDoctorId) slotWhere.doctorId = resolvedDoctorId;
+        
+        console.log(`[Booking] Attempting to mark slot as booked:`, slotWhere);
+        
         const slot = await Slot.findOne({ where: slotWhere, order: [['id', 'ASC']] });
         if (slot) {
             await slot.update({ available: false });
+            console.log(`[Booking] Slot ${slot.id} marked as unavailable`);
+        } else {
+            console.log(`[Booking] No matching slot found to mark as booked`);
         }
 
         const appointment = await Appointment.create({
