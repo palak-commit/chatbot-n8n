@@ -47,16 +47,20 @@ async function syncAndSeed() {
     ];
 
     for (const doc of doctorsData) {
-        await Doctor.findOrCreate({
+        const [doctor, created] = await Doctor.findOrCreate({
             where: { username: doc.username },
             defaults: doc
         });
         
-        // Update the 'about' field if doctor already exists
-        await Doctor.update(
-            { about: doc.about, specialization: doc.specialization },
-            { where: { username: doc.username } }
-        );
+        if (created) {
+            console.log(`[Seed] Created new doctor: ${doc.username}`);
+        } else {
+            console.log(`[Seed] Doctor already exists: ${doc.username}, updating info...`);
+            await Doctor.update(
+                { about: doc.about, specialization: doc.specialization },
+                { where: { username: doc.username } }
+            );
+        }
     }
 
     console.log('[Seed] Doctors data seeded successfully');
