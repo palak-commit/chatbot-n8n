@@ -38,13 +38,25 @@ exports.saveAppointment = async (req, res) => {
         }
 
         let resolvedDoctorId = doctorId;
-        if (!resolvedDoctorId && doctorName) {
-            const doctor = await Doctor.findOne({ where: { name: doctorName } });
-            resolvedDoctorId = doctor ? doctor.id : null;
+        // If doctorId looks like a port or is invalid, try to find by name
+        if (!resolvedDoctorId || resolvedDoctorId > 1000) {
+            if (doctorName) {
+                const doctor = await Doctor.findOne({ where: { name: doctorName } });
+                resolvedDoctorId = doctor ? doctor.id : 1;
+            } else {
+                resolvedDoctorId = 1;
+            }
+        }
+
+        // Try to extract date from appointmentTime if appointmentDate is missing
+        let finalDate = appointmentDate;
+        if (!finalDate && appointmentTime) {
+            const dateMatch = appointmentTime.match(/(\d{4}-\d{2}-\d{2})/);
+            if (dateMatch) finalDate = dateMatch[1];
         }
 
         const slotWhere = { time: appointmentTime };
-        if (appointmentDate) slotWhere.date = appointmentDate;
+        if (finalDate) slotWhere.date = finalDate;
         if (resolvedDoctorId) slotWhere.doctorId = resolvedDoctorId;
         const slot = await Slot.findOne({ where: slotWhere, order: [['id', 'ASC']] });
         if (slot) {
@@ -53,8 +65,8 @@ exports.saveAppointment = async (req, res) => {
 
         const appointment = await Appointment.create({
             patientName,
-            doctorId: resolvedDoctorId || 1,
-            appointmentDate: appointmentDate || null,
+            doctorId: resolvedDoctorId,
+            appointmentDate: finalDate || null,
             appointmentTime,
             status: status || 'confirmed',
         });
