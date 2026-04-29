@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { API_BASE_URL } from '../lib/api';
 
 const SESSION_KEY = 'chat_session_id';
+const CHAT_HISTORY_KEY = 'chat_history';
 
 function getSessionId() {
   let sessionId = localStorage.getItem(SESSION_KEY);
@@ -14,10 +15,18 @@ function getSessionId() {
 
 function UserChatPage() {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, role: 'bot', text: 'Hello! Hu tamaro chatbot assistant chu. Shu help joiye?' },
-  ]);
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem(CHAT_HISTORY_KEY);
+    return saved ? JSON.parse(saved) : [
+      { id: 1, role: 'bot', text: 'Hello! Hu tamaro chatbot assistant chu. Shu help joiye?' },
+    ];
+  });
   const [isSending, setIsSending] = useState(false);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+  }, [messages]);
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
 
