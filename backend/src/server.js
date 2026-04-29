@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const routes = require('./routes');
 const { syncAndSeed } = require('./models');
+const vectorService = require('./services/vector.service');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -34,14 +35,17 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Test endpoint working' });
 });
 
-function ensureDatabaseInitialized() {
+async function ensureDatabaseInitialized() {
     if (!dbInitPromise) {
-        dbInitPromise = syncAndSeed()
+        dbInitPromise = Promise.all([
+            syncAndSeed(),
+            vectorService.initializeVectorStore()
+        ])
             .then(() => {
-                console.log('[DB] Database initialized successfully');
+                console.log('[Init] Database and Vector Store initialized successfully');
             })
             .catch((error) => {
-                console.error('[DB] Database initialization failed:', error.message);
+                console.error('[Init] Initialization failed:', error.message);
                 dbInitPromise = null;
                 throw error;
             });

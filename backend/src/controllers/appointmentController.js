@@ -45,6 +45,7 @@ exports.saveAppointment = async (req, res) => {
 
         const slotWhere = { time: appointmentTime };
         if (appointmentDate) slotWhere.date = appointmentDate;
+        if (resolvedDoctorId) slotWhere.doctorId = resolvedDoctorId;
         const slot = await Slot.findOne({ where: slotWhere, order: [['id', 'ASC']] });
         if (slot) {
             await slot.update({ available: false });

@@ -1,10 +1,11 @@
 const memory = require('./chatMemory.service');
 const n8n = require('./n8n.service');
 const booking = require('./booking.service');
+const vector = require('./vector.service');
 const { extractPatientNameFromMessage, isLikelyName } = require('../utils/nameExtractor');
 const { parseAgentReply } = require('../utils/parseAgentReply');
 
-const FALLBACK_REPLY = 'Hu tamari help mate ready chu.';
+const FALLBACK_REPLY = 'માફ કરશો, હું અત્યારે તમારી મદદ નથી કરી શકતો. કૃપા કરીને થોડીવાર પછી પ્રયત્ન કરો.';
 
 async function handleChatMessage({ message, sessionId, doctor: inputDoctor, availableSlots: inputAvailableSlots }) {
     const normalizedMessage = String(message || '').trim();
@@ -14,7 +15,11 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
 
     const normalizedSessionId = sessionId || 'guest-session';
     const doctorContext = booking.normalizeDoctorContext(inputDoctor) || await booking.getDoctorContext();
-    const availableSlots = Array.isArray(inputAvailableSlots) ? inputAvailableSlots : await booking.getAvailableSlots();
+    const allDoctors = await booking.getAllDoctorsContext();
+    const availableSlots = Array.isArray(inputAvailableSlots) ? inputAvailableSlots : await booking.getAvailableSlots(doctorContext.doctorId);
+
+    // Get relevant context from Vector DB
+    const vectorContext = await vector.searchContext(normalizedMessage);
 
     const extractedName = extractPatientNameFromMessage(normalizedMessage);
     if (extractedName) memory.updateSession(normalizedSessionId, { patientName: extractedName });
@@ -25,8 +30,10 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
         message: normalizedMessage,
         sessionId: normalizedSessionId,
         doctor: doctorContext,
+        allDoctors,
         availableSlots,
         memory: sessionMemory,
+        vectorContext: vectorContext, // Added vector context
         knownPatientName: sessionMemory.patientName || '',
         knownSelectedTime: sessionMemory.selectedTime || '',
         knownSelectedDate: sessionMemory.selectedDate || '',

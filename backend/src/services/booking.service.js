@@ -23,15 +23,25 @@ function splitDateTimeFromAppointment(appointmentDate, appointmentTime) {
     return { date, time };
 }
 
-async function getAvailableSlots() {
+async function getAvailableSlots(doctorId = null) {
+    const whereClause = { available: true };
+    if (doctorId) {
+        whereClause.doctorId = doctorId;
+    }
+
     const slots = await Slot.findAll({
-        where: { available: true },
+        where: whereClause,
         order: [['date', 'ASC'], ['id', 'ASC']],
-        attributes: ['id', 'date', 'time'],
+        attributes: ['id', 'date', 'time', 'doctorId'],
     });
 
+    const appointmentWhere = { status: 'confirmed' };
+    if (doctorId) {
+        appointmentWhere.doctorId = doctorId;
+    }
+
     const bookedAppointments = await Appointment.findAll({
-        where: { status: 'confirmed' },
+        where: appointmentWhere,
         attributes: ['appointmentDate', 'appointmentTime'],
     });
 
@@ -83,6 +93,24 @@ async function getDoctorContext() {
         doctorName: doctor.name,
         specialization: doctor.specialization || 'General Physician',
     };
+}
+
+async function getAllDoctorsContext() {
+    const doctors = await Doctor.findAll({
+        attributes: ['id', 'name', 'specialization'],
+    });
+
+    const doctorsWithSlots = await Promise.all(doctors.map(async (doc) => {
+        const slots = await getAvailableSlots(doc.id);
+        return {
+            doctorId: doc.id,
+            doctorName: doc.name,
+            specialization: doc.specialization,
+            availableSlots: slots
+        };
+    }));
+
+    return doctorsWithSlots;
 }
 
 function resolveBookingFromPayload(payload, memory, defaultDoctorId) {
@@ -154,6 +182,7 @@ function normalizeDoctorContext(input) {
 module.exports = {
     getAvailableSlots,
     getDoctorContext,
+    getAllDoctorsContext,
     normalizeDoctorContext,
     resolveBookingFromPayload,
     createAppointmentIfRequested,

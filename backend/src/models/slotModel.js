@@ -15,6 +15,11 @@ const Slot = sequelize.define('Slot', {
         type: DataTypes.STRING(50),
         allowNull: false
     },
+    doctorId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'doctor_id'
+    },
     available: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

@@ -6,23 +6,60 @@ const Appointment = require('./appointmentModel');
 Doctor.hasMany(Appointment, { foreignKey: 'doctorId' });
 Appointment.belongsTo(Doctor, { foreignKey: 'doctorId' });
 
+Doctor.hasMany(Slot, { foreignKey: 'doctorId' });
+Slot.belongsTo(Doctor, { foreignKey: 'doctorId' });
+
 async function syncAndSeed() {
     await sequelize.authenticate();
     console.log('[DB] Connected successfully');
     await sequelize.sync();
     console.log('[DB] Models synced successfully');
 
-    const [, created] = await Doctor.findOrCreate({
-        where: { username: 'doctor' },
-        defaults: {
+    const doctorsData = [
+        {
             name: 'Dr. Palak',
-            username: 'doctor',
+            username: 'doctor_palak',
             password: 'admin123',
-            specialization: 'General Physician'
+            specialization: 'General Physician',
+            about: 'Dr. Palak has over 10 years of experience in family medicine and preventive care. She is dedicated to providing holistic healthcare for all age groups.'
+        },
+        {
+            name: 'Dr. Rajesh',
+            username: 'doctor_rajesh',
+            password: 'admin123',
+            specialization: 'Cardiologist',
+            about: 'Dr. Rajesh is a renowned cardiologist specializing in interventional cardiology and heart failure management with 15 years of practice.'
+        },
+        {
+            name: 'Dr. Sneha',
+            username: 'doctor_sneha',
+            password: 'admin123',
+            specialization: 'Pediatrician',
+            about: 'Dr. Sneha is a compassionate pediatrician focused on child development, immunization, and adolescent health for the past 8 years.'
+        },
+        {
+            name: 'Dr. Amit',
+            username: 'doctor_amit',
+            password: 'admin123',
+            specialization: 'Dermatologist',
+            about: 'Dr. Amit specializes in advanced skin treatments, cosmetic dermatology, and treating complex skin allergies and infections.'
         }
-    });
+    ];
 
-    console.log(created ? '[Seed] Default doctor created' : '[Seed] Default doctor already exists');
+    for (const doc of doctorsData) {
+        await Doctor.findOrCreate({
+            where: { username: doc.username },
+            defaults: doc
+        });
+        
+        // Update the 'about' field if doctor already exists
+        await Doctor.update(
+            { about: doc.about, specialization: doc.specialization },
+            { where: { username: doc.username } }
+        );
+    }
+
+    console.log('[Seed] Doctors data seeded successfully');
 }
 
 module.exports = {

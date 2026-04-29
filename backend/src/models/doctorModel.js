@@ -23,6 +23,10 @@ const Doctor = sequelize.define('Doctor', {
     specialization: {
         type: DataTypes.STRING(100),
         allowNull: true
+    },
+    about: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: 'doctors',

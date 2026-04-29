@@ -36,7 +36,10 @@ function DoctorSlotPage() {
 
   const loadSlots = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/slots`);
+      const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+      const doctorId = auth.doctorId;
+      const url = doctorId ? `${API_BASE_URL}/slots?doctorId=${doctorId}` : `${API_BASE_URL}/slots`;
+      const res = await fetch(url);
       const data = await res.json();
       setSlots(Array.isArray(data) ? data : []);
     } catch {
@@ -90,12 +93,14 @@ function DoctorSlotPage() {
       return;
     }
     const time = formatTimeTo12Hour(newSlotTime);
+    const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+    const doctorId = auth.doctorId;
 
     try {
       const res = await fetch(`${API_BASE_URL}/slots`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: newSlotDate, time, available: true }),
+        body: JSON.stringify({ date: newSlotDate, time, available: true, doctorId }),
       });
       const data = await res.json();
 
