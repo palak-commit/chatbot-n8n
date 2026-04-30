@@ -20,9 +20,9 @@ A bilingual (English / Gujarati / Hinglish) doctor-appointment booking chatbot p
                           doctors / slots / appointments
 ```
 
-- **Frontend** (`frontend/`) — React 19 + Vite + Tailwind. Two routes:
+- **Frontend** (`frontend/`) — React 19 + Vite + Tailwind v4. Feature-folder layout (`src/features/chat/`, `src/features/doctor/`) with shared `lib/` and `hooks/`. Light/dark theme toggle (`useTheme` hook + class-based Tailwind variant, persisted in `localStorage["theme"]`). Two routes:
   - `/` → user chatbot (chat history persisted in `localStorage`)
-  - `/doctor` → doctor login + slot management (date + time, persisted via `localStorage`)
+  - `/doctor` → doctor login + dashboard with `slots` / `appointments` tabs (auth persisted via `localStorage`)
 - **Backend** (`backend/`) — Express 5 + Sequelize + MySQL. Proxies user messages to an n8n webhook, persists doctors/slots/appointments, and augments each request with RAG context retrieved from Pinecone. A service layer (`services/{chat,booking,n8n,vector,chatMemory}.service.js`) keeps controllers thin.
 - **n8n workflow** — Booking Agent (LLM) with two HTTP Request tools that call the backend's `/api/appointments` endpoints.
 - **Vector store** — Pinecone index populated from PDFs in `backend/src/data/knowledge_base/` via OpenRouter embeddings (`text-embedding-3-small`, 1024 dims). Used to inject medicine-related context into the agent prompt.

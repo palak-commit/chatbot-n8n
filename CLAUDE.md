@@ -42,7 +42,7 @@ Routes are split per resource and aggregated by [routes/index.js](backend/src/ro
 | [chatroutes.js](backend/src/routes/chatroutes.js) | `/api/chat` | `POST /` |
 | [appointmentroutes.js](backend/src/routes/appointmentroutes.js) | `/api/appointments` | `GET / POST` (called by n8n tools) |
 
-Each route file delegates to its own controller: [authcontroller.js](backend/src/controllers/authcontroller.js), [slotcontroller.js](backend/src/controllers/slotcontroller.js), [doctorcontroller.js](backend/src/controllers/doctorcontroller.js).
+Each route file delegates to its own controller: [authcontroller.js](backend/src/controllers/authcontroller.js), [slotcontroller.js](backend/src/controllers/slotcontroller.js), [doctorcontroller.js](backend/src/controllers/doctorcontroller.js), [chatController.js](backend/src/controllers/chatController.js), [appointmentController.js](backend/src/controllers/appointmentController.js). File naming is inconsistent (mixed lowercase / camelCase) — match existing siblings when adding new files.
 
 ### Service layer ([backend/src/services/](backend/src/services/))
 
@@ -53,6 +53,8 @@ Each route file delegates to its own controller: [authcontroller.js](backend/src
 - [booking.service.js](backend/src/services/booking.service.js) — doctor/slot context builders + `createAppointmentIfRequested`.
 - [chatMemory.service.js](backend/src/services/chatMemory.service.js) — in-memory `Map` keyed by `sessionId`. **NOT persisted** — restart wipes it. Serverless cold starts also wipe it.
 - [vector.service.js](backend/src/services/vector.service.js) — Pinecone init + `searchContext(query)` returning concatenated `metadata.content` from top-K matches (`VECTOR_SEARCH_LIMIT`, default 2).
+- [embedding.service.js](backend/src/services/embedding.service.js) — OpenRouter embedding wrapper used by `vector.service` and `indexPdf`.
+- [appointment.service.js](backend/src/services/appointment.service.js) — appointment list/create logic used by [appointmentController.js](backend/src/controllers/appointmentController.js).
 
 ### Utils ([backend/src/utils/](backend/src/utils/))
 
@@ -62,9 +64,16 @@ Each route file delegates to its own controller: [authcontroller.js](backend/src
 
 ### Frontend
 
-- [frontend/src/doctor/DoctorSlotPage.jsx](frontend/src/doctor/DoctorSlotPage.jsx) — login persisted under `localStorage["doctorAuth"]`. Slot list grouped by date.
-- [frontend/src/user/UserChatPage.jsx](frontend/src/user/UserChatPage.jsx) — chat UI; POSTs to `/api/chat`. Chat history persisted in `localStorage`.
-- [frontend/src/lib/api.js](frontend/src/lib/api.js) — fetch wrapper using `VITE_API_BASE_URL`.
+Feature-folder layout under [frontend/src/features/](frontend/src/features/):
+
+- [features/chat/ChatPage.jsx](frontend/src/features/chat/ChatPage.jsx) — user chat UI; POSTs to `/api/chat`. Chat history + session id persisted in `localStorage` (`chat_history`, `chat_session_id`).
+- [features/doctor/SlotPage.jsx](frontend/src/features/doctor/SlotPage.jsx) — doctor login + dashboard. Auth persisted under `localStorage["doctorAuth"]` (`{ token, doctorId, doctor }`). Tabs: `slots` / `appointments`.
+- [features/doctor/layout/](frontend/src/features/doctor/layout/) — `Sidebar.jsx` (nav + theme toggle + logout), `Header.jsx` (greeting + doctor info).
+- [features/doctor/components/](frontend/src/features/doctor/components/) — `SlotList.jsx`, `AppointmentList.jsx`.
+- [lib/api.js](frontend/src/lib/api.js) — fetch wrapper (`apiFetch`) + `API_BASE_URL` (only place that reads `import.meta.env.VITE_API_BASE_URL`).
+- [hooks/useTheme.js](frontend/src/hooks/useTheme.js) — light/dark toggle. Persists in `localStorage["theme"]`. Used directly by ChatPage; SlotPage has its own equivalent inline state passed into `Sidebar`. Both sync to the same `theme` key.
+
+**Dark mode:** Tailwind v4 with `@custom-variant dark (&:where(.dark, .dark *));` declared in [index.css](frontend/src/index.css). Anti-flicker IIFE in [index.html](frontend/index.html) reads `localStorage["theme"]` (or system preference) before React mounts and adds `.dark` to `<html>`. Add `dark:` variants to any new components.
 
 ## Things that surprise
 
@@ -81,6 +90,8 @@ Each route file delegates to its own controller: [authcontroller.js](backend/src
 
 - Backend is CommonJS (`require`). Don't introduce ESM there.
 - Frontend uses Tailwind utility classes — no separate stylesheets per component.
+- All new UI must include `dark:` variants for any color-bearing classes.
+- `localStorage` keys in use: `chat_session_id`, `chat_history`, `doctorAuth`, `theme`. Don't string-duplicate — reuse the existing constants.
 - Do **not** add comments explaining the obvious; only annotate non-obvious WHY (e.g., the stop-list rationale).
 - No tests exist. Don't add a test framework unless asked.
 
