@@ -32,9 +32,20 @@ async function resolveDoctorId(doctorId, doctorName) {
 }
 
 function deriveDate(appointmentDate, appointmentTime) {
-    if (appointmentDate) return appointmentDate;
-    const match = appointmentTime && appointmentTime.match(/(\d{4}-\d{2}-\d{2})/);
-    return match ? match[1] : null;
+    if (appointmentDate && appointmentDate.match(/^\d{4}-\d{2}-\d{2}$/)) return appointmentDate;
+    
+    // Try to extract date from appointmentTime (e.g., "2026-05-14 01:00 PM")
+    const match = appointmentTime && String(appointmentTime).match(/(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+
+    // If appointmentDate is provided but not in ISO format, try to parse it
+    if (appointmentDate) {
+        const d = new Date(appointmentDate);
+        if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0];
+        }
+    }
+    return null;
 }
 
 async function markSlotBooked({ doctorId, date, time }) {
