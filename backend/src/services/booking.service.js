@@ -35,6 +35,10 @@ async function getAvailableSlots(doctorId = null) {
         attributes: ['id', 'date', 'time', 'doctorId'],
     });
 
+    if (slots.length === 0) {
+        return []; // Return empty array if no slots in DB
+    }
+
     const appointmentWhere = { status: 'confirmed' };
     if (doctorId) {
         appointmentWhere.doctorId = doctorId;
@@ -85,7 +89,7 @@ async function getDoctorContext() {
     });
 
     if (!doctor) {
-        return { doctorId: 1, doctorName: 'Doctor', specialization: 'General Physician' };
+        return { doctorId: 30001, doctorName: 'Doctor', specialization: 'General Physician' };
     }
 
     return {
