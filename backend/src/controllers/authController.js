@@ -6,7 +6,13 @@ exports.login = async (req, res) => {
         const doctor = await Doctor.findOne({ where: { username, password } });
 
         if (doctor) {
-            res.json({ success: true, token: 'fake-jwt-token', doctorId: doctor.id });
+            res.json({ 
+                success: true, 
+                token: 'fake-jwt-token', 
+                doctorId: doctor.id,
+                doctorName: doctor.name,
+                specialization: doctor.specialization
+            });
         } else {
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }

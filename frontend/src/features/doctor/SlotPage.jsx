@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import Sidebar from './layout/Sidebar';
+import Header from './layout/Header';
+import SlotList from './components/SlotList';
+import AppointmentList from './components/AppointmentList';
 
 const AUTH_KEY = 'doctorAuth';
 
@@ -11,13 +15,40 @@ const formatTimeTo12Hour = (value) => {
   return `${String(normalizedHours).padStart(2, '0')}:${minutes} ${period}`;
 };
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+};
+
 function SlotPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem(AUTH_KEY)));
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [activeTab, setActiveTab] = useState('slots'); // 'slots' or 'appointments'
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [newSlotDate, setNewSlotDate] = useState('');
   const [newSlotTime, setNewSlotTime] = useState('');
   const [slots, setSlots] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [doctorInfo, setDoctorInfo] = useState(() => {
+    const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+    return auth.doctor || { name: 'Doctor' };
+  });
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
@@ -25,6 +56,7 @@ function SlotPage() {
     localStorage.removeItem(AUTH_KEY);
     setIsLoggedIn(false);
     setSlots([]);
+    setAppointments([]);
     setUsername('');
     setPassword('');
   };
@@ -46,13 +78,26 @@ function SlotPage() {
     }
   }, [showMessage]);
 
+  const loadAppointments = useCallback(async () => {
+    try {
+      const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+      const doctorId = auth.doctorId;
+      const url = doctorId ? `/appointments?doctorId=${doctorId}` : `/appointments`;
+      const { data } = await apiFetch(url);
+      setAppointments(Array.isArray(data.appointments) ? data.appointments : []);
+    } catch {
+      showMessage('Appointments load nathi thati', true);
+    }
+  }, [showMessage]);
+
   useEffect(() => {
     if (!isLoggedIn) return undefined;
     const timeoutId = setTimeout(() => {
       void loadSlots();
+      void loadAppointments();
     }, 0);
     return () => clearTimeout(timeoutId);
-  }, [isLoggedIn, loadSlots]);
+  }, [isLoggedIn, loadSlots, loadAppointments]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -69,9 +114,20 @@ function SlotPage() {
         return;
       }
 
-      localStorage.setItem(AUTH_KEY, JSON.stringify({ token: data.token, doctorId: data.doctorId }));
+      const loggedInDoctor = { 
+        name: data.doctorName || 'Doctor',
+        specialization: data.specialization || 'Specialist'
+      };
+
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ 
+        token: data.token, 
+        doctorId: data.doctorId,
+        doctor: loggedInDoctor
+      }));
+      setDoctorInfo(loggedInDoctor);
       setIsLoggedIn(true);
       await loadSlots();
+      await loadAppointments();
     } catch {
       showMessage('Login request fail thai', true);
     }
@@ -115,9 +171,9 @@ function SlotPage() {
 
   if (!isLoggedIn) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6">
+      <main className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6 dark:bg-slate-950">
         <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
-          <div className="overflow-hidden rounded-3xl bg-white shadow-2xl border border-gray-100">
+          <div className="overflow-hidden rounded-3xl bg-white shadow-2xl border border-gray-100 dark:bg-slate-900 dark:border-slate-800 dark:shadow-black/40">
             <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-8 text-white text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-inner">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -132,7 +188,7 @@ function SlotPage() {
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400 px-1">Username</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -142,7 +198,7 @@ function SlotPage() {
                     placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full rounded-2xl border-0 bg-gray-50 py-4 pl-12 pr-4 text-sm ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    className="w-full rounded-2xl border-0 bg-gray-50 py-4 pl-12 pr-4 text-sm ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:ring-slate-700 dark:focus:bg-slate-800"
                   />
                 </div>
               </div>
@@ -150,7 +206,7 @@ function SlotPage() {
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400 px-1">Password</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002-2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
@@ -160,7 +216,7 @@ function SlotPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-2xl border-0 bg-gray-50 py-4 pl-12 pr-4 text-sm ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    className="w-full rounded-2xl border-0 bg-gray-50 py-4 pl-12 pr-4 text-sm ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:ring-slate-700 dark:focus:bg-slate-800"
                   />
                 </div>
               </div>
@@ -170,7 +226,7 @@ function SlotPage() {
               </button>
               
               {message && (
-                <div className={`flex items-center gap-2 rounded-xl p-4 text-sm animate-in slide-in-from-top-2 duration-300 ${isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+                <div className={`flex items-center gap-2 rounded-xl p-4 text-sm animate-in slide-in-from-top-2 duration-300 ${isError ? 'bg-red-50 text-red-600 border border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30' : 'bg-green-50 text-green-600 border border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30'}`}>
                   {isError ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -185,7 +241,7 @@ function SlotPage() {
               )}
             </form>
           </div>
-          <p className="mt-8 text-center text-sm text-gray-500 font-medium tracking-wide">
+          <p className="mt-8 text-center text-sm text-gray-500 font-medium tracking-wide dark:text-slate-500">
             © 2026 HealthCare Clinic Management System
           </p>
         </div>
@@ -194,153 +250,52 @@ function SlotPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] pb-20">
-      {/* Top Navbar */}
-      <nav className="sticky top-0 z-10 border-b border-gray-100 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Slot Manager</h1>
-              <p className="text-xs font-medium text-gray-400">Manage availability</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100 hover:scale-105 active:scale-95 transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Sign Out
-          </button>
-        </div>
-      </nav>
+    <main className="min-h-screen bg-[#f8fafc] flex overflow-hidden">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        handleLogout={handleLogout} 
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+      />
 
-      <div className="mx-auto mt-8 max-w-5xl px-6 grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Sidebar: Add Slot Form */}
-        <aside className="lg:col-span-1">
-          <div className="sticky top-24 rounded-3xl bg-white p-6 shadow-xl shadow-blue-900/5 border border-gray-100">
-            <h3 className="mb-6 text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 text-green-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-              </span>
-              Add New Slot
-            </h3>
-            
-            <form onSubmit={handleAddSlot} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-widest text-gray-400 px-1">Date</label>
-                <input
-                  type="date"
-                  value={newSlotDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setNewSlotDate(e.target.value)}
-                  className="w-full rounded-2xl border-0 bg-gray-50 px-4 py-3.5 text-sm ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-green-500 transition-all outline-none"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-widest text-gray-400 px-1">Time</label>
-                <input
-                  type="time"
-                  step="1800"
-                  value={newSlotTime}
-                  onChange={(e) => setNewSlotTime(e.target.value)}
-                  className="w-full rounded-2xl border-0 bg-gray-50 px-4 py-3.5 text-sm ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-green-500 transition-all outline-none"
-                />
-              </div>
-              <button type="submit" className="w-full mt-2 rounded-2xl bg-green-600 py-4 font-bold text-white shadow-lg shadow-green-100 hover:bg-green-700 hover:scale-[1.02] active:scale-95 transition-all">
-                Save Slot
-              </button>
-            </form>
-            
-            {message && (
-              <div className={`mt-6 flex items-center gap-2 rounded-xl p-4 text-xs font-medium animate-in slide-in-from-top-2 duration-300 ${isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
-                {message}
-              </div>
-            )}
-          </div>
-        </aside>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <Header 
+          greeting={getGreeting()} 
+          doctorInfo={doctorInfo} 
+        />
 
-        {/* Main Content: Slots Display */}
-        <section className="lg:col-span-2">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-gray-800">Your Availability</h3>
-            <div className="rounded-full bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-600 border border-blue-100 uppercase tracking-wide">
-              {slots.length} Total Slots
-            </div>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-8 bg-[#f8fafc] dark:bg-slate-950 transition-colors duration-300">
+          <div className="mb-8">
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white capitalize tracking-tight">
+              {activeTab === 'slots' ? 'Manage Availability' : 'Confirmed Appointments'}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+              {activeTab === 'slots' 
+                ? 'Update your schedule and time slots for patients.' 
+                : 'View and manage your upcoming patient visits.'}
+            </p>
           </div>
 
-          {slots.length === 0 ? (
-            <div className="rounded-3xl bg-white p-12 text-center shadow-xl shadow-blue-900/5 border border-gray-100">
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-50 text-gray-300">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h4 className="text-lg font-bold text-gray-800">No slots found</h4>
-              <p className="text-sm text-gray-500 mt-1">Start by adding your first availability on the left.</p>
-            </div>
+          {activeTab === 'slots' ? (
+            <SlotList 
+              slots={slots}
+              newSlotDate={newSlotDate}
+              setNewSlotDate={setNewSlotDate}
+              newSlotTime={newSlotTime}
+              setNewSlotTime={setNewSlotTime}
+              handleAddSlot={handleAddSlot}
+              message={message}
+              isError={isError}
+            />
           ) : (
-            <div className="space-y-8">
-              {Object.entries(
-                slots.reduce((acc, slot) => {
-                  const key = slot.date || 'No date';
-                  (acc[key] = acc[key] || []).push(slot);
-                  return acc;
-                }, {})
-              )
-                .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-                .map(([date, dateSlots]) => (
-                  <div key={date} className="animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-gray-200"></div>
-                      <span className="rounded-full bg-white px-4 py-1 text-sm font-black text-blue-600 border border-blue-50 shadow-sm uppercase tracking-wider">
-                        {new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </span>
-                      <div className="h-px flex-1 bg-gray-200"></div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {dateSlots.map((slot) => (
-                        <div
-                          key={slot.id}
-                          className="group relative flex items-center justify-between rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-blue-200"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-xl font-bold shadow-inner ${slot.available ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-[15px] font-bold text-gray-800">{slot.time}</p>
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${slot.available ? 'text-green-500' : 'text-red-500'}`}>
-                                {slot.available ? 'Available' : 'Booked'}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {slot.available && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-md">Edit</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <AppointmentList appointments={appointments} />
             </div>
           )}
-        </section>
+        </div>
       </div>
     </main>
   );
