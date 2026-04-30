@@ -15,12 +15,20 @@ async function listAppointments({ patientName, doctorId, status } = {}) {
 
 async function resolveDoctorId(doctorId, doctorName) {
     // n8n sometimes passes a port number or stale id; fall back to name lookup, then default doctor.
-    if (doctorId && doctorId <= 1000) return doctorId;
+    if (doctorId && doctorId < 10000) return doctorId;
     if (doctorName) {
-        const doctor = await Doctor.findOne({ where: { name: doctorName } });
+        // Clean the name (remove specialization like "(Cardiologist)")
+        const cleanName = doctorName.split('(')[0].trim();
+        const doctor = await Doctor.findOne({ 
+            where: { 
+                name: { [require('sequelize').Op.like]: `%${cleanName}%` } 
+            } 
+        });
         if (doctor) return doctor.id;
     }
-    return 1;
+    // Fallback to first available doctor id if name lookup fails
+    const firstDoctor = await Doctor.findOne({ order: [['id', 'ASC']] });
+    return firstDoctor ? firstDoctor.id : 1;
 }
 
 function deriveDate(appointmentDate, appointmentTime) {
