@@ -32,7 +32,7 @@ async function searchContext(query) {
         const queryEmbedding = await createEmbedding(query);
         const results = await pineconeIndex.query({
             vector: queryEmbedding,
-            topK: Number(process.env.VECTOR_SEARCH_LIMIT || 2),
+            topK: 5, // Increased to get more sections from PDF
             includeMetadata: true,
         });
 
