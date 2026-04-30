@@ -1,5 +1,5 @@
 const express = require('express');
-const slotController = require('../controllers/slotController');
+const slotController = require('../controllers/slotcontroller');
 
 const router = express.Router();
 

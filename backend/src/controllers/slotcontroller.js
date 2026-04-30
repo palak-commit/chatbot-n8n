@@ -1,4 +1,4 @@
-const { Slot, Doctor } = require('../models');
+const { Slot } = require('../models');
 
 exports.getSlots = async (req, res) => {
     try {
@@ -59,36 +59,6 @@ exports.updateSlot = async (req, res) => {
         }
 
         res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-exports.getDoctor = async (req, res) => {
-    try {
-        const doctor = await Doctor.findOne({
-            order: [['id', 'ASC']],
-            attributes: ['id', 'name', 'specialization'],
-        });
-        if (!doctor) {
-            return res.status(404).json({ success: false, message: 'Doctor not found' });
-        }
-        res.json(doctor);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-exports.login = async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const doctor = await Doctor.findOne({ where: { username, password } });
-
-        if (doctor) {
-            res.json({ success: true, token: 'fake-jwt-token', doctorId: doctor.id });
-        } else {
-            res.status(401).json({ success: false, message: 'Invalid credentials' });
-        }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

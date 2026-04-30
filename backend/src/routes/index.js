@@ -1,9 +1,9 @@
 const express = require('express');
-const authRoutes = require('./auth.routes');
-const slotRoutes = require('./slot.routes');
-const doctorRoutes = require('./doctor.routes');
-const chatRoutes = require('./chat.routes');
-const appointmentRoutes = require('./appointment.routes');
+const authRoutes = require('./authroutes');
+const slotRoutes = require('./slotroutes');
+const doctorRoutes = require('./doctorroutes');
+const chatRoutes = require('./chatroutes');
+const appointmentRoutes = require('./appointmentroutes');
 
 const router = express.Router();
 

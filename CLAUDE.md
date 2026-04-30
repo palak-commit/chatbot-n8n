@@ -36,13 +36,13 @@ Routes are split per resource and aggregated by [routes/index.js](backend/src/ro
 
 | File | Mount | Endpoints |
 |---|---|---|
-| [auth.routes.js](backend/src/routes/auth.routes.js) | `/api` | `POST /login` |
-| [slot.routes.js](backend/src/routes/slot.routes.js) | `/api/slots` | `GET / POST / PUT` |
-| [doctor.routes.js](backend/src/routes/doctor.routes.js) | `/api/doctor` | `GET /` |
-| [chat.routes.js](backend/src/routes/chat.routes.js) | `/api/chat` | `POST /` |
-| [appointment.routes.js](backend/src/routes/appointment.routes.js) | `/api/appointments` | `GET / POST` (called by n8n tools) |
+| [authroutes.js](backend/src/routes/authroutes.js) | `/api` | `POST /login` |
+| [slotroutes.js](backend/src/routes/slotroutes.js) | `/api/slots` | `GET / POST / PUT` |
+| [doctorroutes.js](backend/src/routes/doctorroutes.js) | `/api/doctor` | `GET /` |
+| [chatroutes.js](backend/src/routes/chatroutes.js) | `/api/chat` | `POST /` |
+| [appointmentroutes.js](backend/src/routes/appointmentroutes.js) | `/api/appointments` | `GET / POST` (called by n8n tools) |
 
-`auth`, `slot`, and `doctor` routes all currently delegate to [slotController.js](backend/src/controllers/slotController.js) — that's why it owns login + doctor lookup despite the name.
+Each route file delegates to its own controller: [authcontroller.js](backend/src/controllers/authcontroller.js), [slotcontroller.js](backend/src/controllers/slotcontroller.js), [doctorcontroller.js](backend/src/controllers/doctorcontroller.js).
 
 ### Service layer ([backend/src/services/](backend/src/services/))
 
