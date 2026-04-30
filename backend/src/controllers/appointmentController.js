@@ -11,9 +11,17 @@ exports.getAppointments = async (req, res) => {
 
 exports.saveAppointment = async (req, res) => {
     try {
-        const { patientName, appointmentTime } = req.body;
-        if (!patientName || !appointmentTime) {
-            return res.status(400).json({ success: false, message: 'patientName and appointmentTime are required' });
+        const { patientName, appointmentTime, appointmentDate } = req.body;
+        
+        // Basic presence check
+        if (!patientName) {
+            return res.status(400).json({ success: false, message: 'patientName is required' });
+        }
+        if (!appointmentTime || String(appointmentTime).includes('confirmed')) {
+            return res.status(400).json({ success: false, message: 'A valid appointmentTime is required' });
+        }
+        if (!appointmentDate) {
+            return res.status(400).json({ success: false, message: 'appointmentDate is required' });
         }
 
         const appointment = await appointmentService.createAppointment(req.body);

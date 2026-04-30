@@ -53,9 +53,25 @@ async function markSlotBooked({ doctorId, date, time }) {
 }
 
 async function createAppointment({ patientName, doctorName, doctorId, appointmentDate, appointmentTime, status }) {
+    const finalDate = deriveDate(appointmentDate, appointmentTime);
+    
+    if (!finalDate) {
+        throw new Error('A valid appointment date is required');
+    }
+
+    const isPlaceholder = appointmentTime && (
+        appointmentTime.includes('confirmed') || 
+        appointmentTime.includes('to be') || 
+        appointmentTime.toLowerCase().includes('any')
+    );
+
+    if (isPlaceholder) {
+        throw new Error('A valid appointment time is required');
+    }
+
     const existing = await Appointment.findOne({
         where: {
-            appointmentDate: appointmentDate || null,
+            appointmentDate: finalDate,
             appointmentTime,
             status: 'confirmed',
         },
@@ -67,7 +83,6 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
     }
 
     const resolvedDoctorId = await resolveDoctorId(doctorId, doctorName);
-    const finalDate = deriveDate(appointmentDate, appointmentTime);
 
     await markSlotBooked({ doctorId: resolvedDoctorId, date: finalDate, time: appointmentTime });
 

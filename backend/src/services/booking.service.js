@@ -131,7 +131,18 @@ function resolveBookingFromPayload(payload, memory, defaultDoctorId) {
     const date = booking.date || payload.selectedDate || memory.selectedDate || '';
     const doctorId = booking.doctorId || defaultDoctorId || 1;
 
-    if (!patientName || !time) return null;
+    // Strict validation for chat-based booking
+    const isPlaceholder = (val) => {
+        if (!val) return true;
+        const s = String(val).toLowerCase();
+        return s.includes('confirmed') || s.includes('to be') || s.includes('any') || s.includes('slot');
+    };
+
+    if (!patientName || isPlaceholder(time) || isPlaceholder(date)) {
+        console.log('[Booking] Validation failed:', { patientName, time, date, isTimePlaceholder: isPlaceholder(time), isDatePlaceholder: isPlaceholder(date) });
+        return null;
+    }
+
     return { patientName, time, date, doctorId };
 }
 
