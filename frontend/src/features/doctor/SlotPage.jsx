@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { API_BASE_URL } from '../lib/api';
+import { apiFetch } from '../../lib/api';
 
 const AUTH_KEY = 'doctorAuth';
 
@@ -11,7 +11,7 @@ const formatTimeTo12Hour = (value) => {
   return `${String(normalizedHours).padStart(2, '0')}:${minutes} ${period}`;
 };
 
-function DoctorSlotPage() {
+function SlotPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem(AUTH_KEY)));
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -38,9 +38,8 @@ function DoctorSlotPage() {
     try {
       const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
       const doctorId = auth.doctorId;
-      const url = doctorId ? `${API_BASE_URL}/slots?doctorId=${doctorId}` : `${API_BASE_URL}/slots`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const url = doctorId ? `/slots?doctorId=${doctorId}` : `/slots`;
+      const { data } = await apiFetch(url);
       setSlots(Array.isArray(data) ? data : []);
     } catch {
       showMessage('Slots load nathi thata', true);
@@ -60,12 +59,10 @@ function DoctorSlotPage() {
     showMessage('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
+      const { data } = await apiFetch('/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
 
       if (!data.success) {
         showMessage('Login failed', true);
@@ -97,14 +94,12 @@ function DoctorSlotPage() {
     const doctorId = auth.doctorId;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/slots`, {
+      const { ok, data } = await apiFetch('/slots', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: newSlotDate, time, available: true, doctorId }),
       });
-      const data = await res.json();
 
-      if (!res.ok) {
+      if (!ok) {
         showMessage(data.message || 'Slot add nathi thayu', true);
         return;
       }
@@ -351,4 +346,4 @@ function DoctorSlotPage() {
   );
 }
 
-export default DoctorSlotPage;
+export default SlotPage;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { API_BASE_URL } from '../lib/api';
+import { apiFetch } from '../../lib/api';
 
 const SESSION_KEY = 'chat_session_id';
 const CHAT_HISTORY_KEY = 'chat_history';
@@ -13,7 +13,7 @@ function getSessionId() {
   return sessionId;
 }
 
-function UserChatPage() {
+function ChatPage() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(CHAT_HISTORY_KEY);
@@ -41,17 +41,15 @@ function UserChatPage() {
 
     try {
       setIsSending(true);
-      const res = await fetch(`${API_BASE_URL}/chat`, {
+      const { ok, data } = await apiFetch('/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
           sessionId: getSessionId(),
         }),
       });
 
-      const data = await res.json();
-      const botReply = data.reply || (res.ok ? 'Reply malyo nathi' : 'Server error aavyo');
+      const botReply = data.reply || (ok ? 'Reply malyo nathi' : 'Server error aavyo');
 
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'bot', text: botReply }]);
 
@@ -181,4 +179,4 @@ function UserChatPage() {
   );
 }
 
-export default UserChatPage;
+export default ChatPage;
