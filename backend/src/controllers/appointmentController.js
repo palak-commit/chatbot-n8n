@@ -20,9 +20,7 @@ exports.saveAppointment = async (req, res) => {
         if (!appointmentTime || String(appointmentTime).includes('confirmed')) {
             return res.status(400).json({ success: false, message: 'A valid appointmentTime is required' });
         }
-        if (!appointmentDate) {
-            return res.status(400).json({ success: false, message: 'appointmentDate is required' });
-        }
+        // Removed strict appointmentDate check to allow deriveDate to handle it from appointmentTime
 
         const appointment = await appointmentService.createAppointment(req.body);
         return res.json({ success: true, appointment });

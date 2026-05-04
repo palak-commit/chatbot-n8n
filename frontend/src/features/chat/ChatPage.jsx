@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -28,16 +28,25 @@ function ChatPage() {
   const { theme, toggle: toggleTheme } = useTheme();
 
   // Text-to-Speech (TTS) Setup
-  const speak = (text, lang = 'gu-IN') => {
+  const speak = useCallback((text, lang = 'gu-IN') => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Clean text: remove emojis, bullet points, and special characters
+      const cleanText = text
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
+        .replace(/[•*-]/g, '') // Bullet points (bullets, stars, and hyphens)
+        .replace(/\s+/g, ' ') // Extra spaces/newlines
+        .trim();
+
+      if (!cleanText) return;
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang; 
       utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
-  };
+  }, []);
 
   // Voice Recognition Setup
   const recognition = useMemo(() => {
@@ -89,16 +98,25 @@ function ChatPage() {
 
   const canSend = useMemo(() => input.trim().length > 0, [input]);
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
+  const QUICK_REPLIES = [
+    { label: '📅 એપોઈન્ટમેન્ટ બુક કરો', value: 'Appointment book karo' },
+    { label: '🕒 ડૉક્ટરના સ્લોટ્સ કેટલા છે?', value: 'Doctor na slots ketla che?' },
+  ];
 
-    const userMessage = { id: Date.now(), role: 'user', text };
+  const handleSend = useCallback(async (e, directText = null) => {
+    if (e) e.preventDefault();
+    const text = (directText || input).trim();
+    if (!text || isSending) return;
+
+    // Use a timestamp that's generated once per call
+    const timestamp = Date.now();
+    const userMessage = { id: timestamp, role: 'user', text };
+    
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    
     const currentVoiceLang = voiceLanguage;
-    setVoiceLanguage(null); // Reset for next interaction
+    setVoiceLanguage(null);
 
     try {
       setIsSending(true);
@@ -112,41 +130,41 @@ function ChatPage() {
 
       const botReply = data.reply || (ok ? 'Reply malyo nathi' : 'Server error aavyo');
 
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'bot', text: botReply }]);
+      // Update bot message with a unique ID based on the user message timestamp
+      setMessages((p) => [...p, { id: timestamp + 1, role: 'bot', text: botReply }]);
 
-      // Speak if the input was via voice, using the same language
       if (currentVoiceLang && ok) {
         speak(botReply, currentVoiceLang);
       }
 
       if (data?.booking?.success) {
-        setMessages((prev) => [
-          ...prev,
+        setMessages((p) => [
+          ...p,
           {
-            id: Date.now() + 2,
+            id: timestamp + 2,
             role: 'bot',
             text: `Appointment book thai gayu: ${data.booking.patientName} - ${data.booking.time}`,
           },
         ]);
       } else if (data?.booking?.success === false) {
-        setMessages((prev) => [
-          ...prev,
+        setMessages((p) => [
+          ...p,
           {
-            id: Date.now() + 3,
+            id: timestamp + 3,
             role: 'bot',
             text: `Booking fail: ${data.booking.message}`,
           },
         ]);
       }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 4, role: 'bot', text: 'Connection issue, please try again.' },
+      setMessages((p) => [
+        ...p,
+        { id: timestamp + 4, role: 'bot', text: 'Connection issue, please try again.' },
       ]);
     } finally {
       setIsSending(false);
     }
-  };
+  }, [input, isSending, voiceLanguage, speak]);
 
 
   return (
@@ -218,12 +236,15 @@ function ChatPage() {
           </div>
         ))}
         {isSending && (
-          <div className="flex justify-start animate-pulse">
-            <div className="rounded-2xl bg-white px-5 py-3 border border-gray-100 dark:bg-slate-800 dark:border-slate-700">
-              <div className="flex gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-300 animate-bounce dark:bg-slate-500"></span>
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:0.2s] dark:bg-slate-500"></span>
-                <span className="h-1.5 w-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:0.4s] dark:bg-slate-500"></span>
+          <div className="flex justify-start animate-in fade-in slide-in-from-left-2 duration-300">
+            <div className="rounded-3xl rounded-tl-sm bg-white px-5 py-4 border border-gray-100 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce [animation-duration:0.8s]"></span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]"></span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]"></span>
+                </div>
+                <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Thinking</span>
               </div>
             </div>
           </div>
@@ -232,6 +253,20 @@ function ChatPage() {
 
       {/* Input Area */}
       <footer className="border-t border-gray-50 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        {/* Quick Replies */}
+        <div className="mb-4 flex flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {QUICK_REPLIES.map((reply, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => handleSend(null, reply.value)}
+              className="whitespace-nowrap rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition-all hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+            >
+              {reply.label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSend} className="relative flex items-center gap-2">
           <div className="relative flex-1">
             <input
