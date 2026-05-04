@@ -23,7 +23,64 @@ function ChatPage() {
     ];
   });
   const [isSending, setIsSending] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
+
+  // Text-to-Speech (TTS) Setup
+  const speak = (text, lang = 'gu-IN') => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang; 
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Voice Recognition Setup
+  const recognition = useMemo(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'gu-IN'; // This can be made dynamic later
+
+      rec.onstart = () => setIsListening(true);
+      rec.onend = () => setIsListening(false);
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setVoiceLanguage(rec.lang); // Store the exact language used
+      };
+      rec.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          alert('માઇક્રોફોન વાપરવાની પરવાનગી નથી. કૃપા કરીને બ્રાઉઝર સેટિંગ્સમાં જઈને "Allow" કરો અને પેજ રિલોડ કરો.');
+        } else {
+          alert('વોઇસ ઇનપુટમાં સમસ્યા આવી: ' + event.error);
+        }
+      };
+      return rec;
+    }
+    return null;
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognition) {
+      alert('તમારા બ્રાઉઝરમાં વોઇસ સપોર્ટ ઉપલબ્ધ નથી. કૃપા કરીને Google Chrome નો ઉપયોગ કરો.');
+      return;
+    }
+
+    if (isListening) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  };
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -40,6 +97,8 @@ function ChatPage() {
     const userMessage = { id: Date.now(), role: 'user', text };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    const currentVoiceLang = voiceLanguage;
+    setVoiceLanguage(null); // Reset for next interaction
 
     try {
       setIsSending(true);
@@ -54,6 +113,11 @@ function ChatPage() {
       const botReply = data.reply || (ok ? 'Reply malyo nathi' : 'Server error aavyo');
 
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'bot', text: botReply }]);
+
+      // Speak if the input was via voice, using the same language
+      if (currentVoiceLang && ok) {
+        speak(botReply, currentVoiceLang);
+      }
 
       if (data?.booking?.success) {
         setMessages((prev) => [
@@ -169,26 +233,50 @@ function ChatPage() {
       {/* Input Area */}
       <footer className="border-t border-gray-50 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <form onSubmit={handleSend} className="relative flex items-center gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your health concern..."
-            className="w-full rounded-2xl border-0 bg-gray-100 px-5 py-4 pr-14 text-[15px] text-gray-900 placeholder-gray-500 ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:ring-slate-700 dark:focus:bg-slate-800"
-          />
-          <button
-            type="submit"
-            disabled={!canSend || isSending}
-            className={`absolute right-2 rounded-xl p-2.5 transition-all duration-200 ${
-              canSend && !isSending 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:scale-105 active:scale-95' 
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-            </svg>
-          </button>
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your health concern..."
+              className="w-full rounded-2xl border-0 bg-gray-100 px-5 py-4 pr-24 text-[15px] text-gray-900 placeholder-gray-500 ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:ring-slate-700 dark:focus:bg-slate-800"
+            />
+            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`rounded-xl p-2.5 transition-all duration-200 ${
+                  isListening 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+                title={isListening ? 'Listening...' : 'Start Voice Input'}
+              >
+                {isListening ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+              <button
+                type="submit"
+                disabled={!canSend || isSending}
+                className={`rounded-xl p-2.5 transition-all duration-200 ${
+                  canSend && !isSending 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 hover:scale-105 active:scale-95' 
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </form>
         <p className="mt-3 text-center text-[11px] font-medium text-gray-400 uppercase tracking-widest dark:text-slate-500">
           Powered by HealthCare Clinic AI
