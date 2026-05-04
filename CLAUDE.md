@@ -6,7 +6,7 @@ Guidance for Claude Code when working on this repo.
 
 - **Monorepo** (no workspaces): two sibling apps — [backend/](backend/) (Express 5 + Sequelize/MySQL, CommonJS) and [frontend/](frontend/) (React 19 + Vite + Tailwind, ESM).
 - **Git repo** with `main` as the default branch.
-- **Deployment:** root + per-app [vercel.json](vercel.json); [docker-compose.yml](docker-compose.yml) for local MySQL.
+- **Deployment:** root + per-app [vercel.json](vercel.json). Local MySQL is expected to be running on the host (no docker-compose in repo).
 - **External dependencies:**
   - **n8n cloud** workflow *Doctor Appointment Chatbot* (see [doctor_appointment_workflow.json](doctor_appointment_workflow.json)). Backend forwards user messages to its webhook; the workflow's HTTP tool nodes call back into the backend via a tunnel URL (cloudflared / ngrok).
   - **Pinecone** vector DB + **OpenRouter** embeddings (`text-embedding-3-small`, 1024 dims) for RAG over the medicine knowledge base in [backend/src/data/knowledge_base/](backend/src/data/knowledge_base/).
@@ -36,13 +36,13 @@ Routes are split per resource and aggregated by [routes/index.js](backend/src/ro
 
 | File | Mount | Endpoints |
 |---|---|---|
-| [authroutes.js](backend/src/routes/authroutes.js) | `/api` | `POST /login` |
-| [slotroutes.js](backend/src/routes/slotroutes.js) | `/api/slots` | `GET / POST / PUT` |
-| [doctorroutes.js](backend/src/routes/doctorroutes.js) | `/api/doctor` | `GET /` |
-| [chatroutes.js](backend/src/routes/chatroutes.js) | `/api/chat` | `POST /` |
-| [appointmentroutes.js](backend/src/routes/appointmentroutes.js) | `/api/appointments` | `GET / POST` (called by n8n tools) |
+| [authRoutes.js](backend/src/routes/authRoutes.js) | `/api` | `POST /login` |
+| [slotRoutes.js](backend/src/routes/slotRoutes.js) | `/api/slots` | `GET / POST / PUT` |
+| [doctorRoutes.js](backend/src/routes/doctorRoutes.js) | `/api/doctor` | `GET /` |
+| [chatRoutes.js](backend/src/routes/chatRoutes.js) | `/api/chat` | `POST /` |
+| [appointmentRoutes.js](backend/src/routes/appointmentRoutes.js) | `/api/appointments` | `GET / POST` (called by n8n tools) |
 
-Each route file delegates to its own controller: [authcontroller.js](backend/src/controllers/authcontroller.js), [slotcontroller.js](backend/src/controllers/slotcontroller.js), [doctorcontroller.js](backend/src/controllers/doctorcontroller.js), [chatController.js](backend/src/controllers/chatController.js), [appointmentController.js](backend/src/controllers/appointmentController.js). File naming is inconsistent (mixed lowercase / camelCase) — match existing siblings when adding new files.
+Each route file delegates to its own controller: [authController.js](backend/src/controllers/authController.js), [slotController.js](backend/src/controllers/slotController.js), [doctorController.js](backend/src/controllers/doctorController.js), [chatController.js](backend/src/controllers/chatController.js), [appointmentController.js](backend/src/controllers/appointmentController.js). Routes and controllers both use camelCase (`*Routes.js` / `*Controller.js`) — match the convention when adding new files.
 
 ### Service layer ([backend/src/services/](backend/src/services/))
 
