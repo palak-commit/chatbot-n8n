@@ -29,13 +29,21 @@ function ChatPage() {
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
-    // Clean text: remove emojis, bullet points, markdown, and special characters
-    const cleanText = text
+    // Clean text and format dates for natural speech
+    let cleanText = text
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
       .replace(/\*\*/g, '') // Remove bold markdown (**)
       .replace(/[•*-]/g, '') // Bullet points
       .replace(/\s+/g, ' ') // Extra spaces/newlines
       .trim();
+
+    // Natural Date Reading (e.g., 2026-05-05 -> 5 May 2026)
+    cleanText = cleanText.replace(/(\d{4}-\d{2}-\d{2})/g, (match) => {
+      const date = new Date(match);
+      if (isNaN(date)) return match;
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      return date.toLocaleDateString(lang === 'gu-IN' ? 'gu-IN' : 'en-IN', options);
+    });
 
     if (!cleanText) return;
 
