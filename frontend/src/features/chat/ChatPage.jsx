@@ -201,10 +201,9 @@ function ChatPage() {
       // Update bot message with a unique ID based on the user message timestamp
       setMessages((p) => [...p, { id: timestamp + 1, role: 'bot', text: botReply }]);
 
-      // Always speak the bot reply, defaulting to Gujarati if no voice language is set
-      const speakLang = currentVoiceLang || 'gu-IN';
-      if (ok) {
-        speak(botReply, speakLang);
+      // Only speak the bot reply if the user used voice input
+      if (ok && currentVoiceLang) {
+        speak(botReply, currentVoiceLang);
       }
 
       if (data?.booking?.success) {
