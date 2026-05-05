@@ -27,10 +27,8 @@ function ChatPage() {
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
 
-  // Text-to-Speech (TTS) Setup using Google Translate Hack
-  const speak = useCallback((text, lang = 'gu') => {
-    // Stop any currently playing audio if needed (optional)
-    
+  // Text-to-Speech (TTS) Setup using Google Translate Hack with fallback to best browser voice
+  const speak = useCallback((text, lang = 'gu-IN') => {
     // Clean text: remove emojis, bullet points, markdown, and special characters
     const cleanText = text
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
@@ -41,18 +39,30 @@ function ChatPage() {
 
     if (!cleanText) return;
 
-    // Google Translate TTS URL (Hack)
-    // lang: 'gu' for Gujarati, 'hi' for Hindi, 'en' for English
+    // Use Google Translate TTS URL (Hack) - Updated with better parameters
     const languageCode = lang.split('-')[0]; // Convert 'gu-IN' to 'gu'
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${languageCode}&client=tw-ob`;
+    // Added ttsspeed=0.9 for a more natural pace
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${languageCode}&client=tw-ob&ttsspeed=0.9`;
 
     const audio = new Audio(ttsUrl);
     audio.play().catch(err => {
       console.error('TTS Playback error:', err);
       // Fallback to Web Speech API if hack fails
       if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
+        
+        // Try to find the best Gujarati voice available in the browser
+        const voices = window.speechSynthesis.getVoices();
+        const gujaratiVoice = voices.find(v => v.lang.includes('gu') || v.name.toLowerCase().includes('gujarati'));
+        
+        if (gujaratiVoice) {
+          utterance.voice = gujaratiVoice;
+        }
+        
         utterance.lang = lang;
+        utterance.rate = 0.85; // Slightly slower for better clarity
+        utterance.pitch = 1;
         window.speechSynthesis.speak(utterance);
       }
     });
