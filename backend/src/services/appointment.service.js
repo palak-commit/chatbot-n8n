@@ -1,4 +1,14 @@
+const { Op } = require('sequelize');
 const { Appointment, Doctor, Slot } = require('../models');
+
+function normalizeTime(value) {
+    if (!value) return value;
+    return String(value)
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([ap])\.?\s*m\.?\s*$/i, ' $1m')
+        .toUpperCase();
+}
 
 async function listAppointments({ patientName, doctorId, status } = {}) {
     const where = {};
@@ -14,8 +24,10 @@ async function listAppointments({ patientName, doctorId, status } = {}) {
 }
 
 async function resolveDoctorId(doctorId, doctorName) {
-    // n8n sometimes passes a port number or stale id; fall back to name lookup, then default doctor.
-    if (doctorId && doctorId < 10000) return doctorId;
+    if (doctorId) {
+        const found = await Doctor.findOne({ where: { id: doctorId }, attributes: ['id'] });
+        if (found) return found.id;
+    }
     if (doctorName) {
         // Clean the name (remove specialization like "(Cardiologist)")
         const cleanName = doctorName.split('(')[0].trim();
@@ -49,30 +61,39 @@ function deriveDate(appointmentDate, appointmentTime) {
 }
 
 async function markSlotBooked({ doctorId, date, time }) {
-    const where = { time };
-    if (date) where.date = date;
-    if (doctorId) where.doctorId = doctorId;
+    const normalizedTime = normalizeTime(time);
+    const baseWhere = {};
+    if (date) baseWhere.date = date;
+    if (doctorId) baseWhere.doctorId = doctorId;
 
-    console.log('[Booking] Attempting to mark slot as booked:', where);
-    const slot = await Slot.findOne({ where, order: [['id', 'ASC']] });
+    console.log('[Booking] Attempting to mark slot as booked:', { ...baseWhere, time: normalizedTime });
+
+    let slot = await Slot.findOne({ where: { ...baseWhere, time: normalizedTime }, order: [['id', 'ASC']] });
+    if (!slot) {
+        slot = await Slot.findOne({
+            where: { ...baseWhere, time: { [Op.like]: normalizedTime.replace(/\s+/g, '%') } },
+            order: [['id', 'ASC']],
+        });
+    }
     if (slot) {
         await slot.update({ available: false });
         console.log(`[Booking] Slot ${slot.id} marked as unavailable`);
-    } else {
-        console.log('[Booking] No matching slot found to mark as booked');
+        return true;
     }
+    console.log('[Booking] No matching slot found to mark as booked');
+    return false;
 }
 
 async function createAppointment({ patientName, doctorName, doctorId, appointmentDate, appointmentTime, status }) {
     const finalDate = deriveDate(appointmentDate, appointmentTime);
-    
+
     if (!finalDate) {
         throw new Error('A valid appointment date is required');
     }
 
     const isPlaceholder = appointmentTime && (
-        appointmentTime.includes('confirmed') || 
-        appointmentTime.includes('to be') || 
+        appointmentTime.includes('confirmed') ||
+        appointmentTime.includes('to be') ||
         appointmentTime.toLowerCase().includes('any')
     );
 
@@ -80,10 +101,14 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
         throw new Error('A valid appointment time is required');
     }
 
+    const finalTime = normalizeTime(appointmentTime);
+    const resolvedDoctorId = await resolveDoctorId(doctorId, doctorName);
+
     const existing = await Appointment.findOne({
         where: {
             appointmentDate: finalDate,
-            appointmentTime,
+            appointmentTime: finalTime,
+            doctorId: resolvedDoctorId,
             status: 'confirmed',
         },
     });
@@ -93,17 +118,23 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
         throw err;
     }
 
-    const resolvedDoctorId = await resolveDoctorId(doctorId, doctorName);
+    await markSlotBooked({ doctorId: resolvedDoctorId, date: finalDate, time: finalTime });
 
-    await markSlotBooked({ doctorId: resolvedDoctorId, date: finalDate, time: appointmentTime });
-
-    return Appointment.create({
+    const appointment = await Appointment.create({
         patientName,
         doctorId: resolvedDoctorId,
         appointmentDate: finalDate,
-        appointmentTime,
+        appointmentTime: finalTime,
         status: status || 'confirmed',
     });
+
+    // Safety net: ensure the slot is marked unavailable even if the first pass missed.
+    await Slot.update(
+        { available: false },
+        { where: { doctorId: resolvedDoctorId, date: finalDate, time: finalTime } },
+    );
+
+    return appointment;
 }
 
 module.exports = { listAppointments, createAppointment };

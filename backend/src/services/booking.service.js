@@ -149,12 +149,18 @@ function resolveBookingFromPayload(payload, memory, defaultDoctorId) {
 async function createAppointmentIfRequested(booking) {
     if (!booking || !booking.patientName || !booking.time) return null;
 
-    console.log('[Booking] Checking slot availability for:', { time: booking.time, date: booking.date, doctorId: booking.doctorId });
+    const normalizedTime = String(booking.time)
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([ap])\.?\s*m\.?\s*$/i, ' $1m')
+        .toUpperCase();
 
-    const slotWhere = { 
-        time: booking.time, 
+    console.log('[Booking] Checking slot availability for:', { time: normalizedTime, date: booking.date, doctorId: booking.doctorId });
+
+    const slotWhere = {
+        time: normalizedTime,
         available: true,
-        doctorId: booking.doctorId || 1 
+        doctorId: booking.doctorId || 1,
     };
     if (booking.date) slotWhere.date = booking.date;
 
@@ -195,6 +201,12 @@ async function createAppointmentIfRequested(booking) {
         appointmentTime: slot.time,
         status: 'confirmed',
     });
+
+    // Safety net: ensure the slot is marked unavailable.
+    await Slot.update(
+        { available: false },
+        { where: { id: slot.id } },
+    );
 
     console.log(`[Booking] Appointment created with ID: ${appointment.id}`);
 
