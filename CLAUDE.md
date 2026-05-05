@@ -54,7 +54,7 @@ Each route file delegates to its own controller: [authController.js](backend/src
 - [chatMemory.service.js](backend/src/services/chatMemory.service.js) — in-memory `Map` keyed by `sessionId`. **NOT persisted** — restart wipes it. Serverless cold starts also wipe it.
 - [vector.service.js](backend/src/services/vector.service.js) — Pinecone init + `searchContext(query)` returning concatenated `metadata.content` from top-K matches (`VECTOR_SEARCH_LIMIT`, default 2).
 - [embedding.service.js](backend/src/services/embedding.service.js) — OpenRouter embedding wrapper used by `vector.service` and `indexPdf`.
-- [appointment.service.js](backend/src/services/appointment.service.js) — appointment list/create logic used by [appointmentController.js](backend/src/controllers/appointmentController.js).
+- [appointment.service.js](backend/src/services/appointment.service.js) — appointment list/create logic used by [appointmentController.js](backend/src/controllers/appointmentController.js). On create it normalizes `appointmentTime` via `normalizeTime` (strips a leading `YYYY-MM-DD` prefix that n8n sometimes prepends, collapses spaces, uppercases AM/PM), resolves `doctorId` against the `doctors` table, and runs a post-insert `Slot.update({ available: false })` as a safety net so a slot can't stay `available=true` after a successful booking. `booking.service.createAppointmentIfRequested` does the same normalization + safety-net update.
 
 ### Utils ([backend/src/utils/](backend/src/utils/))
 
@@ -83,7 +83,7 @@ Feature-folder layout under [frontend/src/features/](frontend/src/features/):
 - **System message** must enforce: only use the listed doctor + slots, reply in user's language/script (English / Gujarati script / Latin-script Gujlish), output plain text (no JSON, no fences).
 - **Sticky patient name:** the controller only fills the name slot if it's still empty *and* the candidate passes `isLikelyName`. Don't break this when refactoring [chat.service.js](backend/src/services/chat.service.js).
 - **Slot uniqueness** is per `(date, time)` pair, not per `time` alone. The model previously had `unique: true` on `time`; removed.
-- **Appointment storage:** `appointment_date` and `appointment_time` are separate columns. The agent must pass both to `saveAppointment`.
+- **Appointment storage:** `appointment_date` and `appointment_time` are separate columns. The agent must pass both to `saveAppointment`. n8n sometimes sends `appointmentTime` as the combined `"YYYY-MM-DD HH:MM AM/PM"` — `normalizeTime` strips the date prefix so slot lookups still match `slots.time` (`"HH:MM AM/PM"`).
 - **Cold-start init:** `app.use('/api', ...)` awaits `ensureDatabaseInitialized()` (DB sync + Pinecone). First request after a cold start can be slow; on failure it returns `500 { error: 'Database initialization failed' }` and resets the promise so the next request retries.
 
 ## Conventions

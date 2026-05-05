@@ -86,7 +86,9 @@ Chunks the PDF (1000-char windows), creates embeddings via OpenRouter, and upser
 ### Important Booking Rule
 
 - If a slot is already booked for a date+time, it is not shown again to new users.
-- Duplicate confirmed booking on same date+time is blocked.
+- Duplicate confirmed booking on same `(doctor, date, time)` is blocked.
+- `appointmentTime` is normalized before slot lookup — a leading `YYYY-MM-DD` prefix (sometimes added by n8n), extra whitespace, and AM/PM casing are all stripped/uppercased so the value matches `slots.time` (`"HH:MM AM/PM"`).
+- After every successful insert the matching slot is force-updated to `available=false` as a safety net, so the slot can never stay open for a confirmed appointment.
 
 ## API
 
