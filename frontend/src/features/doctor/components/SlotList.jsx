@@ -1,4 +1,4 @@
-const SlotList = ({ slots, newSlotDate, setNewSlotDate, newSlotTime, setNewSlotTime, handleAddSlot, message, isError }) => {
+const SlotList = ({ slots, newSlotDate, setNewSlotDate, newSlotTime, setNewSlotTime, handleAddSlot, isAddingSlot, message, isError }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sidebar: Add Slot Form */}
@@ -18,10 +18,11 @@ const SlotList = ({ slots, newSlotDate, setNewSlotDate, newSlotTime, setNewSlotT
               <label className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-1">Date</label>
               <input
                 type="date"
+                disabled={isAddingSlot}
                 value={newSlotDate}
                 min={new Date().toISOString().split('T')[0]}
                 onChange={(e) => setNewSlotDate(e.target.value)}
-                className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-slate-800 px-4 py-3.5 text-sm dark:text-white ring-1 ring-inset ring-gray-200 dark:ring-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-green-500 transition-all outline-none"
+                className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-slate-800 px-4 py-3.5 text-sm dark:text-white ring-1 ring-inset ring-gray-200 dark:ring-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-green-500 transition-all outline-none disabled:opacity-50"
               />
             </div>
             <div className="space-y-1.5">
@@ -29,13 +30,28 @@ const SlotList = ({ slots, newSlotDate, setNewSlotDate, newSlotTime, setNewSlotT
               <input
                 type="time"
                 step="1800"
+                disabled={isAddingSlot}
                 value={newSlotTime}
                 onChange={(e) => setNewSlotTime(e.target.value)}
-                className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-slate-800 px-4 py-3.5 text-sm dark:text-white ring-1 ring-inset ring-gray-200 dark:ring-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-green-500 transition-all outline-none"
+                className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-slate-800 px-4 py-3.5 text-sm dark:text-white ring-1 ring-inset ring-gray-200 dark:ring-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-green-500 transition-all outline-none disabled:opacity-50"
               />
             </div>
-            <button type="submit" className="w-full mt-2 rounded-2xl bg-green-600 py-4 font-bold text-white shadow-lg shadow-green-100 dark:shadow-none hover:bg-green-700 hover:scale-[1.02] active:scale-95 transition-all">
-              Save Slot
+            <button 
+              type="submit" 
+              disabled={isAddingSlot}
+              className="w-full mt-2 rounded-2xl bg-green-600 py-4 font-bold text-white shadow-lg shadow-green-100 dark:shadow-none hover:bg-green-700 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isAddingSlot ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                'Save Slot'
+              )}
             </button>
           </form>
           

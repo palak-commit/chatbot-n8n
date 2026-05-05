@@ -51,6 +51,7 @@ function SlotPage() {
   });
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+  const [isAddingSlot, setIsAddingSlot] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem(AUTH_KEY);
@@ -135,6 +136,8 @@ function SlotPage() {
 
   const handleAddSlot = async (e) => {
     e.preventDefault();
+    if (isAddingSlot) return;
+    
     showMessage('');
 
     if (!newSlotDate) {
@@ -150,6 +153,7 @@ function SlotPage() {
     const doctorId = auth.doctorId;
 
     try {
+      setIsAddingSlot(true);
       const { ok, data } = await apiFetch('/slots', {
         method: 'POST',
         body: JSON.stringify({ date: newSlotDate, time, available: true, doctorId }),
@@ -166,6 +170,8 @@ function SlotPage() {
       await loadSlots();
     } catch {
       showMessage('Slot add request fail thai', true);
+    } finally {
+      setIsAddingSlot(false);
     }
   };
 
@@ -287,6 +293,7 @@ function SlotPage() {
               newSlotTime={newSlotTime}
               setNewSlotTime={setNewSlotTime}
               handleAddSlot={handleAddSlot}
+              isAddingSlot={isAddingSlot}
               message={message}
               isError={isError}
             />
