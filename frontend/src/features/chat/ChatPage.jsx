@@ -37,15 +37,75 @@ function ChatPage() {
       .replace(/\s+/g, ' ') // Extra spaces/newlines
       .trim();
 
-    // Natural Date Reading (e.g., 2026-05-05 -> 5 May 2026)
-    cleanText = cleanText.replace(/(\d{4}-\d{2}-\d{2})/g, (match) => {
-      const date = new Date(match);
-      if (isNaN(date)) return match;
-      const options = { day: 'numeric', month: 'long', year: 'numeric' };
-      return date.toLocaleDateString(lang === 'gu-IN' ? 'gu-IN' : 'en-IN', options);
+    // Natural Date Reading (handles YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY)
+    const monthsGu = [
+      'જાન્યુઆરી', 'ફેબ્રુઆરી', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન',
+      'જુલાઈ', 'ઓગસ્ટ', 'સપ્ટેમ્બર', 'ઓક્ટોબર', 'નવેમ્બર', 'ડિસેમ્બર'
+    ];
+
+    // 1. Handle Combined Date and Time (e.g., 2026-05-02, 05:00AM)
+    // Phrasing: 2026 મે મહિનો 2 તારીખે સવારે 5 વાગ્યે
+    if (lang === 'gu-IN') {
+      cleanText = cleanText.replace(/(\d{4})-(\d{2})-(\d{2}),?\s*(\d{1,2}):(\d{2})\s*(AM|PM)/gi, (match, y, m, d, h, min, period) => {
+        const day = parseInt(d, 10);
+        const month = parseInt(m, 10);
+        const hour = parseInt(h, 10);
+        const p = period.toUpperCase();
+        
+        let timePrefix = '';
+        if (p === 'AM') {
+          if (hour >= 4 && hour < 12) timePrefix = 'સવારે';
+          else if (hour >= 0 && hour < 4) timePrefix = 'મોડી રાત્રે';
+        } else {
+          if (hour === 12 || hour < 4) timePrefix = 'બપોરે';
+          else if (hour >= 4 && hour < 7) timePrefix = 'સાંજે';
+          else timePrefix = 'રાત્રે';
+        }
+        
+        const timePart = timePrefix ? `${timePrefix} ${hour} વાગ્યે` : `${hour} વાગ્યે`;
+        return `${y} ${monthsGu[month - 1]} મહિનો ${day} તારીખે ${timePart}`;
+      });
+    }
+
+    // 2. Handle YYYY-MM-DD separately if not caught above
+    cleanText = cleanText.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match, y, m, d) => {
+      const day = parseInt(d, 10);
+      const month = parseInt(m, 10);
+      return lang === 'gu-IN' ? `${y} ${monthsGu[month - 1]} મહિનો ${day} તારીખે` : `${day} ${new Date(y, month - 1, day).toLocaleString('en-IN', { month: 'long' })} ${y}`;
     });
 
-    if (!cleanText) return;
+    // 2. Handle DD-MM-YYYY or DD/MM/YYYY
+     cleanText = cleanText.replace(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/g, (match, d, m, y) => {
+       const day = parseInt(d, 10);
+       const month = parseInt(m, 10);
+       return lang === 'gu-IN' ? `${day} ${monthsGu[month - 1]} ${y}` : `${day} ${new Date(y, month - 1, day).toLocaleString('en-IN', { month: 'long' })} ${y}`;
+     });
+ 
+     // 3. Natural Time Reading (e.g., 05:00 AM -> સવારે 5 વાગ્યે, 06:00 PM -> સાંજે 6 વાગ્યે)
+     if (lang === 'gu-IN') {
+       cleanText = cleanText.replace(/(\d{1,2}):(\d{2})\s*(AM|PM)/gi, (match, h, m, period) => {
+         const hour = parseInt(h, 10);
+         const p = period.toUpperCase();
+         let timeStr;
+         
+         if (p === 'AM') {
+           if (hour >= 4 && hour < 12) timeStr = `સવારે ${hour}`;
+           else if (hour >= 0 && hour < 4) timeStr = `મોડી રાત્રે ${hour}`;
+           else timeStr = `${hour}`;
+         } else {
+           if (hour === 12 || hour < 4) timeStr = `બપોરે ${hour}`;
+           else if (hour >= 4 && hour < 7) timeStr = `સાંજે ${hour}`;
+           else timeStr = `રાત્રે ${hour}`;
+         }
+         
+         return `${timeStr} વાગ્યે`;
+       });
+     }
+ 
+     // 4. CRITICAL: Remove any remaining leading zeros from any numbers (e.g., "05" -> "5")
+     cleanText = cleanText.replace(/(^|[^\d])0(\d+)/g, '$1$2');
+ 
+     if (!cleanText) return;
 
     const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
     const VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'dVTC43Yewy5fAIcmsISI'; 
