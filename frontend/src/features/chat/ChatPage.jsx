@@ -27,8 +27,8 @@ function ChatPage() {
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
 
-  // Text-to-Speech (TTS) Setup using Google Translate Hack with fallback to best browser voice
-  const speak = useCallback((text, lang = 'gu-IN') => {
+  // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
+  const speak = useCallback(async (text, lang = 'gu-IN') => {
     // Clean text: remove emojis, bullet points, markdown, and special characters
     const cleanText = text
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
@@ -39,30 +39,54 @@ function ChatPage() {
 
     if (!cleanText) return;
 
-    // Use Google Translate TTS URL (Hack) - Updated with better parameters
-    const languageCode = lang.split('-')[0]; // Convert 'gu-IN' to 'gu'
-    // Added ttsspeed=0.9 for a more natural pace
+    const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    const VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'dVTC43Yewy5fAIcmsISI'; 
+
+    if (ELEVENLABS_API_KEY) {
+      try {
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': ELEVENLABS_API_KEY,
+          },
+          body: JSON.stringify({
+            text: cleanText,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const audio = new Audio(URL.createObjectURL(blob));
+          audio.play();
+          return;
+        }
+      } catch (err) {
+        console.error('ElevenLabs TTS error:', err);
+      }
+    }
+
+    // Fallback to Google Translate TTS if ElevenLabs fails or API key is missing
+    const languageCode = lang.split('-')[0];
     const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${languageCode}&client=tw-ob&ttsspeed=0.9`;
 
     const audio = new Audio(ttsUrl);
     audio.play().catch(err => {
-      console.error('TTS Playback error:', err);
-      // Fallback to Web Speech API if hack fails
+      console.error('Google TTS Fallback error:', err);
+      // Final fallback to Web Speech API
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        
-        // Try to find the best Gujarati voice available in the browser
         const voices = window.speechSynthesis.getVoices();
         const gujaratiVoice = voices.find(v => v.lang.includes('gu') || v.name.toLowerCase().includes('gujarati'));
-        
-        if (gujaratiVoice) {
-          utterance.voice = gujaratiVoice;
-        }
-        
+        if (gujaratiVoice) utterance.voice = gujaratiVoice;
         utterance.lang = lang;
-        utterance.rate = 0.85; // Slightly slower for better clarity
-        utterance.pitch = 1;
+        utterance.rate = 0.85;
         window.speechSynthesis.speak(utterance);
       }
     });
