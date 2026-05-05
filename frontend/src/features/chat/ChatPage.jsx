@@ -27,26 +27,35 @@ function ChatPage() {
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
 
-  // Text-to-Speech (TTS) Setup
-  const speak = useCallback((text, lang = 'gu-IN') => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+  // Text-to-Speech (TTS) Setup using Google Translate Hack
+  const speak = useCallback((text, lang = 'gu') => {
+    // Stop any currently playing audio if needed (optional)
+    
+    // Clean text: remove emojis, bullet points, markdown, and special characters
+    const cleanText = text
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
+      .replace(/\*\*/g, '') // Remove bold markdown (**)
+      .replace(/[•*-]/g, '') // Bullet points
+      .replace(/\s+/g, ' ') // Extra spaces/newlines
+      .trim();
 
-      // Clean text: remove emojis, bullet points, markdown, and special characters
-      const cleanText = text
-        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
-        .replace(/\*\*/g, '') // Remove bold markdown (**)
-        .replace(/[•*-]/g, '') // Bullet points (bullets, stars, and hyphens)
-        .replace(/\s+/g, ' ') // Extra spaces/newlines
-        .trim();
+    if (!cleanText) return;
 
-      if (!cleanText) return;
+    // Google Translate TTS URL (Hack)
+    // lang: 'gu' for Gujarati, 'hi' for Hindi, 'en' for English
+    const languageCode = lang.split('-')[0]; // Convert 'gu-IN' to 'gu'
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${languageCode}&client=tw-ob`;
 
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = lang; 
-      utterance.rate = 0.9;
-      window.speechSynthesis.speak(utterance);
-    }
+    const audio = new Audio(ttsUrl);
+    audio.play().catch(err => {
+      console.error('TTS Playback error:', err);
+      // Fallback to Web Speech API if hack fails
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = lang;
+        window.speechSynthesis.speak(utterance);
+      }
+    });
   }, []);
 
   // Voice Recognition Setup
