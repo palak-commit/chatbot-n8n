@@ -27,7 +27,7 @@ function ChatPage() {
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
 
-  // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
+  // Text-to-Speech (TTS) Setup using ElevenLabs (via Backend) with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
     // Clean text: remove emojis, bullet points, markdown, and special characters
     const cleanText = text
@@ -39,39 +39,37 @@ function ChatPage() {
 
     if (!cleanText) return;
 
-    const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
-    const VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'dVTC43Yewy5fAIcmsISI'; 
+    const VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID;
 
-    if (ELEVENLABS_API_KEY) {
-      try {
-        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+    try {
+      // Call our backend proxy instead of ElevenLabs directly
+      const response = await apiFetch('/chat/tts', {
+        method: 'POST',
+        body: JSON.stringify({
+          text: cleanText,
+          voiceId: VOICE_ID
+        }),
+      });
+
+      // apiFetch returns { ok, status, data }, but for binary we need the raw response.
+      // However, our backend returns a buffer. Let's handle it.
+      if (response.ok) {
+        // We need to fetch it again as blob because apiFetch might have parsed it as JSON
+        const rawRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/chat/tts`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'xi-api-key': ELEVENLABS_API_KEY,
-          },
-          body: JSON.stringify({
-            text: cleanText,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.75,
-            },
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: cleanText, voiceId: VOICE_ID })
         });
-
-        if (response.ok) {
-          const blob = await response.blob();
-          const audio = new Audio(URL.createObjectURL(blob));
-          audio.play();
-          return;
-        }
-      } catch (err) {
-        console.error('ElevenLabs TTS error:', err);
+        const blob = await rawRes.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        audio.play();
+        return;
       }
+    } catch (err) {
+      console.error('Backend TTS error:', err);
     }
 
-    // Fallback to Google Translate TTS if ElevenLabs fails or API key is missing
+    // Fallback to Google Translate TTS if backend fails
     const languageCode = lang.split('-')[0];
     const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${languageCode}&client=tw-ob&ttsspeed=0.9`;
 
