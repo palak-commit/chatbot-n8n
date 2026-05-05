@@ -32,9 +32,10 @@ function ChatPage() {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
 
-      // Clean text: remove emojis, bullet points, and special characters
+      // Clean text: remove emojis, bullet points, markdown, and special characters
       const cleanText = text
         .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Emojis
+        .replace(/\*\*/g, '') // Remove bold markdown (**)
         .replace(/[•*-]/g, '') // Bullet points (bullets, stars, and hyphens)
         .replace(/\s+/g, ' ') // Extra spaces/newlines
         .trim();
@@ -230,7 +231,7 @@ function ChatPage() {
               }`}
             >
               <div className="whitespace-pre-wrap text-[15px] leading-relaxed">
-                {msg.text}
+                {msg.text.replace(/\*/g, '')}
               </div>
             </div>
           </div>
