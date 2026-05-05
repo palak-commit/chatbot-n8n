@@ -42,8 +42,11 @@ function ChatPage() {
     const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
     const VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'dVTC43Yewy5fAIcmsISI'; 
 
+    console.log('TTS Debug:', { hasKey: !!ELEVENLABS_API_KEY, voiceId: VOICE_ID });
+
     if (ELEVENLABS_API_KEY) {
       try {
+        console.log('Attempting ElevenLabs TTS...');
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
           method: 'POST',
           headers: {
@@ -54,8 +57,8 @@ function ChatPage() {
             text: cleanText,
             model_id: 'eleven_multilingual_v2',
             voice_settings: {
-              stability: 0.6, // Increased stability for better clarity in regional languages
-              similarity_boost: 0.8, // Higher similarity for better accent
+              stability: 0.5,
+              similarity_boost: 0.75,
               style: 0.0,
               use_speaker_boost: true
             },
@@ -63,16 +66,27 @@ function ChatPage() {
         });
 
         if (response.ok) {
+          console.log('ElevenLabs TTS Success!');
           const blob = await response.blob();
           const audio = new Audio(URL.createObjectURL(blob));
-          audio.play();
+          await audio.play();
           return;
+        } else {
+          const errorData = await response.json();
+          console.error('ElevenLabs API Error:', errorData);
+          // If it's a 401, it means the API key is invalid
+          if (response.status === 401) {
+            console.warn('ElevenLabs API Key is invalid. Falling back to Google TTS.');
+          }
         }
       } catch (err) {
-        console.error('ElevenLabs TTS error:', err);
+        console.error('ElevenLabs Network/Fetch Error:', err);
       }
+    } else {
+      console.warn('ElevenLabs API Key missing, using fallback.');
     }
 
+    console.log('Using Fallback TTS (Google/Browser)...');
     // Fallback to Google Translate TTS if ElevenLabs fails or API key is missing
     const languageCode = lang.split('-')[0];
     const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${languageCode}&client=tw-ob&ttsspeed=0.9`;
@@ -179,8 +193,10 @@ function ChatPage() {
       // Update bot message with a unique ID based on the user message timestamp
       setMessages((p) => [...p, { id: timestamp + 1, role: 'bot', text: botReply }]);
 
-      if (currentVoiceLang && ok) {
-        speak(botReply, currentVoiceLang);
+      // Always speak the bot reply, defaulting to Gujarati if no voice language is set
+      const speakLang = currentVoiceLang || 'gu-IN';
+      if (ok) {
+        speak(botReply, speakLang);
       }
 
       if (data?.booking?.success) {
