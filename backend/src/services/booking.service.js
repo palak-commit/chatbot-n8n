@@ -149,33 +149,54 @@ function resolveBookingFromPayload(payload, memory, defaultDoctorId) {
 async function createAppointmentIfRequested(booking) {
     if (!booking || !booking.patientName || !booking.time) return null;
 
-    const slotWhere = { time: booking.time, available: true };
+    console.log('[Booking] Checking slot availability for:', { time: booking.time, date: booking.date, doctorId: booking.doctorId });
+
+    const slotWhere = { 
+        time: booking.time, 
+        available: true,
+        doctorId: booking.doctorId || 1 
+    };
     if (booking.date) slotWhere.date = booking.date;
 
     const slot = await Slot.findOne({
         where: slotWhere,
         order: [['id', 'ASC']],
     });
-    if (!slot) return { success: false, message: 'Selected slot unavailable' };
+    
+    if (!slot) {
+        console.log('[Booking] No available slot found for criteria:', slotWhere);
+        return { success: false, message: 'Selected slot unavailable' };
+    }
 
     const existing = await Appointment.findOne({
         where: {
             appointmentDate: slot.date || null,
             appointmentTime: slot.time,
+            doctorId: slot.doctorId,
             status: 'confirmed',
         },
     });
-    if (existing) return { success: false, message: 'Selected slot already booked' };
+    
+    if (existing) {
+        // If appointment exists but slot was still marked available, fix it now
+        await slot.update({ available: false });
+        console.log('[Booking] Appointment already exists for this slot. Marked slot as unavailable.');
+        return { success: false, message: 'Selected slot already booked' };
+    }
 
+    // Mark the slot as booked
     await slot.update({ available: false });
+    console.log(`[Booking] Slot ${slot.id} for doctor ${slot.doctorId} marked as unavailable.`);
 
     const appointment = await Appointment.create({
         patientName: booking.patientName,
-        doctorId: booking.doctorId || 1,
+        doctorId: slot.doctorId,
         appointmentDate: slot.date || null,
         appointmentTime: slot.time,
         status: 'confirmed',
     });
+
+    console.log(`[Booking] Appointment created with ID: ${appointment.id}`);
 
     return {
         success: true,
