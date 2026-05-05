@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -26,6 +26,15 @@ function ChatPage() {
   const [isListening, setIsListening] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isSending]);
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
@@ -238,7 +247,7 @@ function ChatPage() {
 
     // Use a timestamp that's generated once per call
     const timestamp = Date.now();
-    const userMessage = { id: timestamp, role: 'user', text };
+    const userMessage = { id: timestamp, role: 'user', text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
     
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -259,7 +268,7 @@ function ChatPage() {
       const botReply = data.reply || (ok ? 'Reply malyo nathi' : 'Server error aavyo');
 
       // Update bot message with a unique ID based on the user message timestamp
-      setMessages((p) => [...p, { id: timestamp + 1, role: 'bot', text: botReply }]);
+      setMessages((p) => [...p, { id: timestamp + 1, role: 'bot', text: botReply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
 
       // Only speak the bot reply if the user used voice input
       if (ok && currentVoiceLang) {
@@ -273,6 +282,7 @@ function ChatPage() {
             id: timestamp + 2,
             role: 'bot',
             text: `Appointment book thai gayu: ${data.booking.patientName} - ${data.booking.time}`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           },
         ]);
       } else if (data?.booking?.success === false) {
@@ -282,13 +292,14 @@ function ChatPage() {
             id: timestamp + 3,
             role: 'bot',
             text: `Booking fail: ${data.booking.message}`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           },
         ]);
       }
     } catch {
       setMessages((p) => [
         ...p,
-        { id: timestamp + 4, role: 'bot', text: 'Connection issue, please try again.' },
+        { id: timestamp + 4, role: 'bot', text: 'Connection issue, please try again.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
       ]);
     } finally {
       setIsSending(false);
@@ -361,6 +372,11 @@ function ChatPage() {
               <div className="whitespace-pre-wrap text-[15px] leading-relaxed">
                 {msg.text.replace(/\*/g, '')}
               </div>
+              {msg.time && (
+                <div className={`mt-1 text-[10px] opacity-70 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                  {msg.time}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -378,6 +394,7 @@ function ChatPage() {
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </section>
 
       {/* Input Area */}
