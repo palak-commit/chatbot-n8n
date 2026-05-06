@@ -17,12 +17,16 @@ exports.subscribe = async (req, res) => {
             return res.status(400).json({ success: false, message: 'sessionId and subscription are required' });
         }
 
-        await PushSubscription.upsert({
-            sessionId,
-            subscription
-        }, { where: { sessionId } });
-
-        return res.json({ success: true, message: 'Subscribed successfully' });
+        // Check if subscription already exists for this session
+        const existing = await PushSubscription.findOne({ where: { sessionId } });
+        
+        if (existing) {
+            await existing.update({ subscription });
+            return res.json({ success: true, message: 'Subscription updated successfully' });
+        } else {
+            await PushSubscription.create({ sessionId, subscription });
+            return res.json({ success: true, message: 'Subscribed successfully' });
+        }
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
