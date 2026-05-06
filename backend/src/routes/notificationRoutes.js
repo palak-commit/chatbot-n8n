@@ -8,9 +8,9 @@ const router = express.Router();
 /**
  * Endpoint to manually trigger notification processing (useful for Vercel Cron)
  */
-router.post('/process', async (req, res) => {
+router.get('/process', async (req, res) => {
     try {
-        console.log('[Cron] Manual trigger: Checking for pending notifications...');
+        console.log('[Cron] Triggered: Checking for pending notifications...');
         
         const now = new Date();
         
