@@ -41,3 +41,13 @@ exports.updateAppointment = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+exports.cancelAppointment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cancelled = await appointmentService.cancelAppointment(id);
+        return res.json({ success: true, message: 'Appointment cancelled successfully', appointment: cancelled });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};

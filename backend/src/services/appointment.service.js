@@ -145,7 +145,23 @@ async function updateAppointment(id, data) {
     const { patientName, doctorName, doctorId, appointmentDate, appointmentTime, status } = data;
 
     if (patientName) appointment.patientName = patientName;
-    if (status) appointment.status = status;
+    
+    // If status is changed to cancelled, free up the slot
+    if (status && status.toLowerCase() === 'cancelled') {
+        appointment.status = 'cancelled';
+        await Slot.update(
+            { available: true },
+            { 
+                where: { 
+                    doctorId: appointment.doctorId, 
+                    date: appointment.appointmentDate, 
+                    time: appointment.appointmentTime 
+                } 
+            }
+        );
+    } else if (status) {
+        appointment.status = status;
+    }
 
     let finalDoctorId = appointment.doctorId;
     if (doctorId || doctorName) {
@@ -154,13 +170,27 @@ async function updateAppointment(id, data) {
     }
 
     if (appointmentDate || appointmentTime) {
+        // Before changing, we could free the old slot, but usually updates 
+        // in this flow are confirmations or slight shifts. 
+        // For a full move, we'd free the old one first:
+        await Slot.update(
+            { available: true },
+            { 
+                where: { 
+                    doctorId: appointment.doctorId, 
+                    date: appointment.appointmentDate, 
+                    time: appointment.appointmentTime 
+                } 
+            }
+        );
+
         const newDate = deriveDate(appointmentDate || appointment.appointmentDate, appointmentTime || appointment.appointmentTime);
         const newTime = normalizeTime(appointmentTime || appointment.appointmentTime);
         
         appointment.appointmentDate = newDate;
         appointment.appointmentTime = newTime;
 
-        // If time changed, mark new slot as booked
+        // Mark new slot as booked
         await markSlotBooked({ doctorId: finalDoctorId, date: newDate, time: newTime });
     }
 
@@ -168,4 +198,31 @@ async function updateAppointment(id, data) {
     return appointment;
 }
 
-module.exports = { listAppointments, createAppointment, updateAppointment };
+async function cancelAppointment(id) {
+    const appointment = await Appointment.findByPk(id);
+    if (!appointment) throw new Error('Appointment not found');
+
+    appointment.status = 'cancelled';
+    await appointment.save();
+
+    // Mark the slot as available again
+    await Slot.update(
+        { available: true },
+        { 
+            where: { 
+                doctorId: appointment.doctorId, 
+                date: appointment.appointmentDate, 
+                time: appointment.appointmentTime 
+            } 
+        }
+    );
+
+    return appointment;
+}
+
+module.exports = {
+    listAppointments,
+    createAppointment,
+    updateAppointment,
+    cancelAppointment,
+};
