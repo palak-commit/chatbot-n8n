@@ -31,6 +31,11 @@ const Appointment = sequelize.define('Appointment', {
         type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: 'confirmed'
+    },
+    sessionId: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        field: 'session_id'
     }
 }, {
     tableName: 'appointments',

@@ -36,6 +36,42 @@ function ChatPage() {
     scrollToBottom();
   }, [messages, isSending]);
 
+  // Push Notification Subscription
+  const subscribeToPush = useCallback(async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: import.meta.env.VITE_VAPID_PUBLIC_KEY
+      });
+
+      await apiFetch('/chat/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: getSessionId(),
+          subscription
+        })
+      });
+      console.log('Push Subscribed!');
+    } catch (err) {
+      console.error('Push Subscription failed:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            subscribeToPush();
+          }
+        });
+      } else if (Notification.permission === 'granted') {
+        subscribeToPush();
+      }
+    }
+  }, [subscribeToPush]);
+
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
     // Clean text and format dates for natural speech

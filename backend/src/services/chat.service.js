@@ -72,7 +72,7 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
         memory.getSession(normalizedSessionId),
         doctorContext.doctorId,
     );
-    const bookingResult = await booking.createAppointmentIfRequested(bookingInput);
+    const bookingResult = await booking.createAppointmentIfRequested(bookingInput, normalizedSessionId);
     const finalMemory = memory.getSession(normalizedSessionId);
 
     return {
