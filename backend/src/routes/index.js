@@ -2,7 +2,7 @@ const express = require('express');
 const authRoutes = require('./authRoutes');
 const slotRoutes = require('./slotRoutes');
 const doctorRoutes = require('./doctorRoutes');
-const slotRoutes = require('./slotRoutes');
+const chatRoutes = require('./chatRoutes');
 const appointmentRoutes = require('./appointmentRoutes');
 const notificationRoutes = require('./notificationRoutes');
 
