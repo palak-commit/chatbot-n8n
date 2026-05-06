@@ -138,4 +138,34 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
     return appointment;
 }
 
-module.exports = { listAppointments, createAppointment };
+async function updateAppointment(id, data) {
+    const appointment = await Appointment.findByPk(id);
+    if (!appointment) throw new Error('Appointment not found');
+
+    const { patientName, doctorName, doctorId, appointmentDate, appointmentTime, status } = data;
+
+    if (patientName) appointment.patientName = patientName;
+    if (status) appointment.status = status;
+
+    let finalDoctorId = appointment.doctorId;
+    if (doctorId || doctorName) {
+        finalDoctorId = await resolveDoctorId(doctorId, doctorName);
+        appointment.doctorId = finalDoctorId;
+    }
+
+    if (appointmentDate || appointmentTime) {
+        const newDate = deriveDate(appointmentDate || appointment.appointmentDate, appointmentTime || appointment.appointmentTime);
+        const newTime = normalizeTime(appointmentTime || appointment.appointmentTime);
+        
+        appointment.appointmentDate = newDate;
+        appointment.appointmentTime = newTime;
+
+        // If time changed, mark new slot as booked
+        await markSlotBooked({ doctorId: finalDoctorId, date: newDate, time: newTime });
+    }
+
+    await appointment.save();
+    return appointment;
+}
+
+module.exports = { listAppointments, createAppointment, updateAppointment };

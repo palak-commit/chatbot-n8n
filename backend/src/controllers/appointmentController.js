@@ -31,3 +31,13 @@ exports.saveAppointment = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+exports.updateAppointment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated = await appointmentService.updateAppointment(id, req.body);
+        return res.json({ success: true, appointment: updated });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
