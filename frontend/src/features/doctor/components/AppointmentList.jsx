@@ -2,7 +2,7 @@ const AppointmentList = ({ appointments }) => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       {appointments.length === 0 ? (
-        <div className="rounded-3xl bg-white dark:bg-slate-900 p-12 text-center shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-slate-800 transition-colors duration-300">
+        <div className="rounded-3xl bg-white dark:bg-slate-900 p-8 sm:p-12 text-center shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-slate-800 transition-colors duration-300">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-50 dark:bg-slate-800 text-gray-300 dark:text-slate-600">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

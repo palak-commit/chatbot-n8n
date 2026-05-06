@@ -344,12 +344,12 @@ function ChatPage() {
 
 
   return (
-    <main className="mx-auto mt-4 flex h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-2xl transition-all duration-300 sm:mt-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40">
+    <main className="mx-auto flex h-dvh w-full max-w-2xl flex-col overflow-hidden border border-gray-100 bg-white shadow-2xl transition-all duration-300 sm:mt-8 sm:h-[90vh] sm:rounded-3xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-50 bg-white/80 px-6 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <header className="flex items-center justify-between border-b border-gray-50 bg-white/80 px-3 py-3 backdrop-blur-md sm:px-6 sm:py-4 dark:border-slate-800 dark:bg-slate-900/80">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg sm:h-10 sm:w-10">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
@@ -395,11 +395,11 @@ function ChatPage() {
       </header>
 
       {/* Chat Messages */}
-      <section className="flex-1 space-y-4 overflow-y-auto bg-[#f8fafc] p-6 scroll-smooth dark:bg-slate-950">
+      <section className="flex-1 space-y-4 overflow-y-auto bg-[#f8fafc] p-3 scroll-smooth sm:p-6 dark:bg-slate-950">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
             <div
-              className={`max-w-[85%] px-5 py-3.5 shadow-sm transition-all hover:shadow-md ${
+              className={`max-w-[85%] px-4 py-3 sm:px-5 sm:py-3.5 shadow-sm transition-all hover:shadow-md ${
                 msg.role === 'user' 
                   ? 'rounded-3xl rounded-tr-sm bg-gradient-to-br from-blue-600 to-blue-700 text-white'
                   : 'rounded-3xl rounded-tl-sm bg-white text-gray-800 border border-gray-100 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'
@@ -434,7 +434,7 @@ function ChatPage() {
       </section>
 
       {/* Input Area */}
-      <footer className="border-t border-gray-50 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <footer className="border-t border-gray-50 bg-white p-3 sm:p-5 dark:border-slate-800 dark:bg-slate-900">
         {/* Quick Replies */}
         <div className="mb-4 flex flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {QUICK_REPLIES.map((reply, index) => (
@@ -456,7 +456,7 @@ function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type your health concern..."
-              className="w-full rounded-2xl border-0 bg-gray-100 px-5 py-4 pr-24 text-[15px] text-gray-900 placeholder-gray-500 ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:ring-slate-700 dark:focus:bg-slate-800"
+              className="w-full rounded-2xl border-0 bg-gray-100 px-4 py-3 pr-24 sm:px-5 sm:py-4 text-[15px] text-gray-900 placeholder-gray-500 ring-1 ring-inset ring-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:ring-slate-700 dark:focus:bg-slate-800"
             />
             <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
               <button

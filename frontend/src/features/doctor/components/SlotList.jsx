@@ -1,6 +1,6 @@
 const SlotList = ({ slots, newSlotDate, setNewSlotDate, newSlotTime, setNewSlotTime, handleAddSlot, isAddingSlot, message, isError }) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sidebar: Add Slot Form */}
       <aside className="lg:col-span-1">
         <div className="rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-slate-800 transition-colors duration-300">
@@ -73,7 +73,7 @@ const SlotList = ({ slots, newSlotDate, setNewSlotDate, newSlotTime, setNewSlotT
         </div>
 
         {slots.length === 0 ? (
-          <div className="rounded-3xl bg-white dark:bg-slate-900 p-12 text-center shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-slate-800 transition-colors duration-300">
+          <div className="rounded-3xl bg-white dark:bg-slate-900 p-8 sm:p-12 text-center shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-slate-800 transition-colors duration-300">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-50 dark:bg-slate-800 text-gray-300 dark:text-slate-600">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

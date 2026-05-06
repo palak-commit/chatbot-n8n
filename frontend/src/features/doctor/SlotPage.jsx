@@ -26,6 +26,7 @@ function SlotPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => Boolean(localStorage.getItem(AUTH_KEY)));
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [activeTab, setActiveTab] = useState('slots'); // 'slots' or 'appointments'
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -177,10 +178,10 @@ function SlotPage() {
 
   if (!isLoggedIn) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6 dark:bg-slate-950">
+      <main className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-4 sm:p-6 dark:bg-slate-950">
         <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
           <div className="overflow-hidden rounded-3xl bg-white shadow-2xl border border-gray-100 dark:bg-slate-900 dark:border-slate-800 dark:shadow-black/40">
-            <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-8 text-white text-center">
+            <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-6 sm:p-8 text-white text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-inner">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-1.196-8.236A9.974 9.974 0 003.33 21m15.34-11.429A9.974 9.974 0 0120.67 21m-8.34-10a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -190,7 +191,7 @@ function SlotPage() {
               <p className="mt-2 text-blue-100 text-sm font-medium">Manage your schedule with ease</p>
             </div>
             
-            <form onSubmit={handleLogin} className="p-8 space-y-5">
+            <form onSubmit={handleLogin} className="p-6 sm:p-8 space-y-5">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400 px-1">Username</label>
                 <div className="relative">
@@ -257,25 +258,28 @@ function SlotPage() {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] flex overflow-hidden">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        handleLogout={handleLogout} 
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        handleLogout={handleLogout}
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header 
-          greeting={getGreeting()} 
-          doctorInfo={doctorInfo} 
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+        <Header
+          greeting={getGreeting()}
+          doctorInfo={doctorInfo}
+          onMenuClick={() => setIsSidebarOpen(true)}
         />
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 bg-[#f8fafc] dark:bg-slate-950 transition-colors duration-300">
-          <div className="mb-8">
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white capitalize tracking-tight">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#f8fafc] dark:bg-slate-950 transition-colors duration-300">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white capitalize tracking-tight">
               {activeTab === 'slots' ? 'Manage Availability' : 'Confirmed Appointments'}
             </h1>
             <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
