@@ -381,15 +381,15 @@ function ChatPage() {
           </div>
         ))}
         {isSending && (
-          <div className="flex justify-start animate-in fade-in slide-in-from-left-2 duration-300">
-            <div className="rounded-3xl rounded-tl-sm bg-white px-5 py-4 border border-gray-100 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce [animation-duration:0.8s]"></span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce [animation-duration:0.8s] [animation-delay:0.2s]"></span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-bounce [animation-duration:0.8s] [animation-delay:0.4s]"></span>
+          <div className="flex justify-start animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="rounded-3xl rounded-tl-sm bg-white px-6 py-4 border border-gray-100 shadow-lg dark:bg-slate-800 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-blue-600 animate-bounce [animation-duration:1s]"></div>
+                  <div className="h-2 w-2 rounded-full bg-blue-500 animate-bounce [animation-duration:1s] [animation-delay:0.2s]"></div>
+                  <div className="h-2 w-2 rounded-full bg-blue-400 animate-bounce [animation-duration:1s] [animation-delay:0.4s]"></div>
                 </div>
-                <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Thinking</span>
+                <span className="text-[13px] font-semibold text-blue-600 animate-pulse tracking-wide uppercase">AI Thinking</span>
               </div>
             </div>
           </div>
