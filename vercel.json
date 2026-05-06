@@ -29,5 +29,11 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/notifications/process",
+      "schedule": "* * * * *"
+    }
   ]
 }

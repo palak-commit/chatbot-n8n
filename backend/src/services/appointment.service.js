@@ -157,10 +157,11 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
             if (period === 'PM' && h < 12) h += 12;
             if (period === 'AM' && h === 12) h = 0;
             
-            const appDate = new Date(appointment.appointmentDate);
-            appDate.setHours(h, minutes, 0, 0);
-            
-            const reminderDate = new Date(appDate.getTime() - 30 * 60000); // 30 mins before
+            const hh = String(h).padStart(2, '0');
+            const mm = String(minutes).padStart(2, '0');
+            const appDate = new Date(`${appointment.appointmentDate}T${hh}:${mm}:00+05:30`);
+
+            const reminderDate = new Date(appDate.getTime() - 30 * 60000); // 30 mins before (IST)
             
             await Notification.create({
                 sessionId,
