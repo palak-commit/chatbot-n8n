@@ -11,7 +11,7 @@ exports.getAppointments = async (req, res) => {
 
 exports.saveAppointment = async (req, res) => {
     try {
-        const { patientName, appointmentTime, appointmentDate } = req.body;
+        const { patientName, appointmentTime, appointmentDate, sessionId } = req.body;
         
         // Basic presence check
         if (!patientName) {

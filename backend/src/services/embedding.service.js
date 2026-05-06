@@ -1,5 +1,5 @@
-const EMBEDDING_MODEL = process.env.OPENROUTER_EMBEDDING_MODEL || 'openai/text-embedding-3-small';
-const EMBEDDING_DIMENSION = Number(process.env.VECTOR_DIMENSION || 1024);
+const EMBEDDING_MODEL = process.env.OPENROUTER_EMBEDDING_MODEL || 'nvidia/llama-nemotron-embed-vl-1b-v2:free';
+const EMBEDDING_DIMENSION = Number(process.env.VECTOR_DIMENSION || 2048);
 
 async function createEmbeddings(input) {
     const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
