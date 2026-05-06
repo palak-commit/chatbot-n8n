@@ -2,8 +2,75 @@ const memory = require('./chatMemory.service');
 const n8n = require('./n8n.service');
 const booking = require('./booking.service');
 const vector = require('./vector.service');
+const notificationService = require('./notification.service');
+const { Appointment, Doctor, Notification } = require('../models');
 const { extractPatientNameFromMessage, isLikelyName } = require('../utils/nameExtractor');
 const { parseAgentReply } = require('../utils/parseAgentReply');
+
+function normalizeApptTime(value) {
+    return String(value || '')
+        .trim()
+        .replace(/^\d{4}-\d{2}-\d{2}[T\s]+/i, '')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([ap])\.?\s*m\.?\s*$/i, ' $1M')
+        .toUpperCase();
+}
+
+async function ensureNotificationsForSession(sessionId, mem, doctorContext) {
+    if (!sessionId || !mem.patientName || !mem.selectedTime || !mem.selectedDate) return;
+    const time = normalizeApptTime(mem.selectedTime);
+
+    const apt = await Appointment.findOne({
+        where: {
+            patientName: mem.patientName,
+            appointmentDate: mem.selectedDate,
+            appointmentTime: time,
+            status: 'confirmed',
+        },
+        order: [['id', 'DESC']],
+    });
+    if (!apt) return;
+
+    if (!apt.sessionId) await apt.update({ sessionId });
+
+    const existingReminder = await Notification.findOne({
+        where: { sessionId, type: 'reminder' },
+        order: [['id', 'DESC']],
+    });
+    if (existingReminder) return; // instant + reminder already handled
+
+    const doctor = apt.doctorId ? await Doctor.findByPk(apt.doctorId) : null;
+    const doctorName = doctor ? doctor.name : (doctorContext && doctorContext.name) || 'Dr. Palak';
+
+    notificationService.sendNotification(sessionId, {
+        title: 'એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅',
+        body: `તમારી એપોઇન્ટમેન્ટ ${doctorName} સાથે ${apt.appointmentDate} એ ${apt.appointmentTime} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`,
+        url: '/',
+    }).catch((err) => console.error('[Push] Fallback instant notification failed:', err));
+
+    try {
+        const [timeStr, period] = time.split(' ');
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        let h = hours;
+        if (period === 'PM' && h < 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        const hh = String(h).padStart(2, '0');
+        const mm = String(minutes).padStart(2, '0');
+        const appDate = new Date(`${apt.appointmentDate}T${hh}:${mm}:00+05:30`);
+        const reminderDate = new Date(appDate.getTime() - 30 * 60000);
+
+        await Notification.create({
+            sessionId,
+            title: 'એપોઇન્ટમેન્ટ રીમાઇન્ડર ⏰',
+            body: `ભૂલશો નહીં, તમારી એપોઇન્ટમેન્ટ ${doctorName} સાથે ૩૦ મિનિટમાં (${apt.appointmentTime}) છે.`,
+            scheduledAt: reminderDate,
+            type: 'reminder',
+        });
+        console.log(`[Booking] Fallback reminder scheduled for: ${reminderDate}`);
+    } catch (err) {
+        console.error('[Booking] Fallback reminder schedule failed:', err);
+    }
+}
 
 const FALLBACK_REPLY = 'માફ કરશો, હું અત્યારે તમારી મદદ નથી કરી શકતો. કૃપા કરીને થોડીવાર પછી પ્રયત્ન કરો.';
 
@@ -74,6 +141,11 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
     );
     const bookingResult = await booking.createAppointmentIfRequested(bookingInput, normalizedSessionId);
     const finalMemory = memory.getSession(normalizedSessionId);
+
+    // Fallback: if n8n's HTTP tool created the appointment directly (without sessionId),
+    // attach sessionId, fire instant push and schedule reminder here.
+    await ensureNotificationsForSession(normalizedSessionId, finalMemory, doctorContext)
+        .catch((err) => console.error('[Booking] ensureNotificationsForSession error:', err));
 
     return {
         ok: true,
