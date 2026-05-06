@@ -4,8 +4,8 @@ const { Notification } = require('../models');
 const notificationService = require('./notification.service');
 
 function startReminderCron() {
-    // Run every 10 minutes
-    cron.schedule('*/10 * * * *', async () => {
+    // Run every 1 minute
+    cron.schedule('* * * * *', async () => {
         try {
             console.log('[Reminder] Checking for pending notifications...');
             
