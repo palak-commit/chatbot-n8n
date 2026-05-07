@@ -1,5 +1,4 @@
-const { Appointment, Slot, Doctor, Notification } = require('../models');
-const notificationService = require('./notification.service');
+const { Appointment, Slot, Doctor } = require('../models');
 
 function normalize(value) {
     return String(value || '').trim().toLowerCase();
@@ -212,45 +211,6 @@ async function createAppointmentIfRequested(booking, sessionId = null) {
     );
 
     console.log(`[Booking] Appointment created with ID: ${appointment.id}`);
-
-    // Schedule notifications
-    if (sessionId) {
-        const doctor = await Doctor.findByPk(slot.doctorId);
-        const doctorName = doctor ? doctor.name : 'Dr. Palak';
-        
-        // 1. Send immediate confirmation notification (Directly, no saving)
-        notificationService.sendNotification(sessionId, {
-            title: 'એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅',
-            body: `તમારી એપોઇન્ટમેન્ટ ${doctorName} સાથે ${appointment.appointmentDate} એ ${appointment.appointmentTime} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`,
-            url: '/'
-        }).catch(err => console.error('[Push] Failed to send direct booking notification:', err));
-
-        // 2. Reminder notification (Save to DB for Cron Job)
-        try {
-            const [timeStr, period] = appointment.appointmentTime.split(' ');
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            let h = hours;
-            if (period === 'PM' && h < 12) h += 12;
-            if (period === 'AM' && h === 12) h = 0;
-            
-            const hh = String(h).padStart(2, '0');
-            const mm = String(minutes).padStart(2, '0');
-            const appDate = new Date(`${appointment.appointmentDate}T${hh}:${mm}:00+05:30`);
-
-            const reminderDate = new Date(appDate.getTime() - 30 * 60000); // 30 mins before (IST)
-            
-            await Notification.create({
-                sessionId,
-                title: 'એપોઇન્ટમેન્ટ રીમાઇન્ડર ⏰',
-                body: `ભૂલશો નહીં, તમારી એપોઇન્ટમેન્ટ ${doctorName} સાથે ૩૦ મિનિટમાં (${appointment.appointmentTime}) છે.`,
-                scheduledAt: reminderDate,
-                type: 'reminder'
-            });
-            console.log(`[Booking] Scheduled reminder for: ${reminderDate}`);
-        } catch (err) {
-            console.error('[Booking] Failed to schedule reminder notification:', err);
-        }
-    }
 
     return {
         success: true,

@@ -50,36 +50,8 @@ function ChatPage() {
   }, []);
 
   useEffect(() => {
-    const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
-    if (appId) {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async (OneSignal) => {
-        try {
-          await OneSignal.init({
-            appId,
-            allowLocalhostAsSecureOrigin: true,
-            notifyButton: { enable: false },
-            serviceWorkerParam: { scope: '/' },
-          });
-
-          await OneSignal.Notifications.requestPermission();
-
-          if (!OneSignal.User.PushSubscription.optedIn) {
-            await OneSignal.User.PushSubscription.optIn();
-          }
-
-          const sessionId = getSessionId();
-          await OneSignal.login(sessionId);
-
-          console.log('[OneSignal] Ready',
-            'sessionId:', sessionId,
-            'permission:', OneSignal.Notifications.permission,
-            'optedIn:', OneSignal.User.PushSubscription.optedIn,
-            'subscriptionId:', OneSignal.User.PushSubscription.id);
-        } catch (err) {
-          console.error('[OneSignal] Init error:', err);
-        }
-      });
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
   }, []);
 
@@ -314,8 +286,16 @@ function ChatPage() {
 
       const botReply = data.reply || (ok ? 'Reply malyo nathi' : 'Server error aavyo');
 
+      const botMessage = {
+        id: timestamp + 1,
+        role: 'bot',
+        text: botReply,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        booking: data.booking
+      };
+
       // Update bot message with a unique ID based on the user message timestamp
-      setMessages((p) => [...p, { id: timestamp + 1, role: 'bot', text: botReply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      setMessages((p) => [...p, botMessage]);
 
       // Only speak the bot reply if the user used voice input
       if (ok && currentVoiceLang) {

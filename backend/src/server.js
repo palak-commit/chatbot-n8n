@@ -6,7 +6,6 @@ const cors = require('cors');
 const routes = require('./routes');
 const { syncAndSeed } = require('./models');
 const vectorService = require('./services/vector.service');
-const reminderService = require('./services/reminder.service');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -44,7 +43,6 @@ async function ensureDatabaseInitialized() {
         ])
             .then(() => {
                 console.log('[Init] Database and Vector Store initialized successfully');
-                reminderService.startReminderCron();
             })
             .catch((error) => {
                 console.error('[Init] Initialization failed:', error.message);

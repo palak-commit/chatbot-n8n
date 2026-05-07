@@ -1,15 +1,26 @@
 const { Op } = require('sequelize');
-const { Appointment, Doctor, Slot, Notification } = require('../models');
-const notificationService = require('./notification.service');
+const { Appointment, Doctor, Slot } = require('../models');
 
 function normalizeTime(value) {
     if (!value) return value;
-    return String(value)
+    let s = String(value)
         .trim()
         .replace(/^\d{4}-\d{2}-\d{2}[T\s]+/i, '')
         .replace(/\s+/g, ' ')
         .replace(/\s*([ap])\.?\s*m\.?\s*$/i, ' $1M')
         .toUpperCase();
+
+    // Convert 24-hour "HH:MM" or "HH:MM:SS" to 12-hour "HH:MM AM/PM" so it matches slots.time
+    const m24 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (m24) {
+        let h = parseInt(m24[1], 10);
+        const mm = m24[2];
+        const period = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (h === 0) h = 12;
+        s = `${String(h).padStart(2, '0')}:${mm} ${period}`;
+    }
+    return s;
 }
 
 async function listAppointments({ patientName, doctorId, status } = {}) {
@@ -136,45 +147,6 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
         { available: false },
         { where: { doctorId: resolvedDoctorId, date: finalDate, time: finalTime } },
     );
-
-    // Schedule notifications if sessionId is provided
-    if (sessionId) {
-        const doctor = await Doctor.findByPk(resolvedDoctorId);
-        const doctorNameStr = doctor ? doctor.name : 'Dr. Palak';
-
-        // 1. Send immediate confirmation notification (Directly, no saving)
-        notificationService.sendNotification(sessionId, {
-            title: 'એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅',
-            body: `તમારી એપોઇન્ટમેન્ટ ${doctorNameStr} સાથે ${appointment.appointmentDate} એ ${appointment.appointmentTime} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`,
-            url: '/'
-        }).catch(err => console.error('[Push] Failed to send direct booking notification (API):', err));
-
-        // 2. Reminder notification (Save to DB for Cron Job)
-        try {
-            const [timeStr, period] = appointment.appointmentTime.split(' ');
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            let h = hours;
-            if (period === 'PM' && h < 12) h += 12;
-            if (period === 'AM' && h === 12) h = 0;
-            
-            const hh = String(h).padStart(2, '0');
-            const mm = String(minutes).padStart(2, '0');
-            const appDate = new Date(`${appointment.appointmentDate}T${hh}:${mm}:00+05:30`);
-
-            const reminderDate = new Date(appDate.getTime() - 30 * 60000); // 30 mins before (IST)
-            
-            await Notification.create({
-                sessionId,
-                title: 'એપોઇન્ટમેન્ટ રીમાઇન્ડર ⏰',
-                body: `ભૂલશો નહીં, તમારી એપોઇન્ટમેન્ટ ${doctorNameStr} સાથે ૩૦ મિનિટમાં (${appointment.appointmentTime}) છે.`,
-                scheduledAt: reminderDate,
-                type: 'reminder'
-            });
-            console.log(`[Booking] Scheduled reminder for: ${reminderDate} (via API)`);
-        } catch (err) {
-            console.error('[Booking] Failed to schedule reminder notification (API):', err);
-        }
-    }
 
     return appointment;
 }
