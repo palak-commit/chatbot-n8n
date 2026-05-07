@@ -50,10 +50,6 @@ function ChatPage() {
   }, []);
 
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
     const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
     if (appId) {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -63,13 +59,23 @@ function ChatPage() {
             appId,
             allowLocalhostAsSecureOrigin: true,
             notifyButton: { enable: false },
+            serviceWorkerParam: { scope: '/' },
           });
+
+          await OneSignal.Notifications.requestPermission();
+
+          if (!OneSignal.User.PushSubscription.optedIn) {
+            await OneSignal.User.PushSubscription.optIn();
+          }
+
           const sessionId = getSessionId();
           await OneSignal.login(sessionId);
-          await OneSignal.Notifications.requestPermission();
-          console.log('[OneSignal] Logged in with sessionId:', sessionId,
+
+          console.log('[OneSignal] Ready',
+            'sessionId:', sessionId,
             'permission:', OneSignal.Notifications.permission,
-            'optedIn:', OneSignal.User.PushSubscription.optedIn);
+            'optedIn:', OneSignal.User.PushSubscription.optedIn,
+            'subscriptionId:', OneSignal.User.PushSubscription.id);
         } catch (err) {
           console.error('[OneSignal] Init error:', err);
         }
