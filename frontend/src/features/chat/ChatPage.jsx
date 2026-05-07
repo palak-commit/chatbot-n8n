@@ -54,26 +54,26 @@ function ChatPage() {
       Notification.requestPermission();
     }
 
-    // OneSignal Initialization
-    const initOneSignal = async () => {
-      try {
-        const OneSignal = window.OneSignal || [];
-        await OneSignal.init({
-          appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
-          allowLocalhostAsSecureOrigin: true,
-        });
-        
-        // Link the session ID to OneSignal
-        const sessionId = getSessionId();
-        await OneSignal.login(sessionId);
-        console.log('[OneSignal] Logged in with sessionId:', sessionId);
-      } catch (err) {
-        console.error('[OneSignal] Init error:', err);
-      }
-    };
-
-    if (import.meta.env.VITE_ONESIGNAL_APP_ID) {
-      initOneSignal();
+    const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
+    if (appId) {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async (OneSignal) => {
+        try {
+          await OneSignal.init({
+            appId,
+            allowLocalhostAsSecureOrigin: true,
+            notifyButton: { enable: false },
+          });
+          const sessionId = getSessionId();
+          await OneSignal.login(sessionId);
+          await OneSignal.Notifications.requestPermission();
+          console.log('[OneSignal] Logged in with sessionId:', sessionId,
+            'permission:', OneSignal.Notifications.permission,
+            'optedIn:', OneSignal.User.PushSubscription.optedIn);
+        } catch (err) {
+          console.error('[OneSignal] Init error:', err);
+        }
+      });
     }
   }, []);
 
