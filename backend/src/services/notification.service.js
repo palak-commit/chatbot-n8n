@@ -9,11 +9,11 @@ async function sendNotification(sessionId, payload) {
     }
 
     try {
-        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+        const response = await fetch('https://api.onesignal.com/notifications', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json; charset=utf-8',
-                'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`
+                'Authorization': `Key ${ONESIGNAL_REST_API_KEY}`
             },
             body: JSON.stringify({
                 app_id: ONESIGNAL_APP_ID,
@@ -25,7 +25,11 @@ async function sendNotification(sessionId, payload) {
         });
 
         const data = await response.json();
-        console.log(`[OneSignal] Notification response for ${sessionId}:`, data);
+        if (data.errors && data.errors.length > 0) {
+            console.error(`[OneSignal] Error response for ${sessionId}:`, data.errors);
+            return false;
+        }
+        console.log(`[OneSignal] Notification success for ${sessionId}:`, data);
         return true;
     } catch (error) {
         console.error(`[OneSignal] Error sending notification to ${sessionId}:`, error);
