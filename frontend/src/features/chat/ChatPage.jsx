@@ -70,6 +70,9 @@ function ChatPage() {
     window.OneSignalDeferred.push(async (OneSignal) => {
       try {
         await OneSignal.Notifications.requestPermission();
+        if (OneSignal.Notifications.permission) {
+          await OneSignal.User.PushSubscription.optIn();
+        }
       } catch (err) {
         console.error('[OneSignal] Permission request error:', err);
       }
