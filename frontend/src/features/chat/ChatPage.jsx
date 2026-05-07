@@ -41,20 +41,30 @@ function ChatPage() {
   useEffect(() => {
     const sessionId = getSessionId();
     if (window.OneSignal) {
-      window.OneSignal.push(() => {
-        window.OneSignal.login(sessionId);
-        
-        // Use the correct v16 API for checking permission
-        const checkPermission = () => {
-          setNotificationPermission(window.OneSignal.Notifications.permission ? 'granted' : 'default');
-        };
+      window.OneSignal.push(async () => {
+        try {
+          await window.OneSignal.init({
+            appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
+            safari_web_id: "web.onesignal.auto.10435956-71bd-428a-a386-8768ef95efa2",
+            notifyButton: {
+              enable: false,
+            },
+            allowLocalhostAsSecure: true,
+          });
 
-        checkPermission();
-        
-        // Correct event listener for v16
-        window.OneSignal.Notifications.addEventListener('permissionChange', (isOptedIn) => {
-          setNotificationPermission(isOptedIn ? 'granted' : 'denied');
-        });
+          await window.OneSignal.login(sessionId);
+          
+          const checkPermission = () => {
+            setNotificationPermission(window.OneSignal.Notifications.permission ? 'granted' : 'default');
+          };
+          checkPermission();
+          
+          window.OneSignal.Notifications.addEventListener('permissionChange', (isOptedIn) => {
+            setNotificationPermission(isOptedIn ? 'granted' : 'denied');
+          });
+        } catch (err) {
+          console.error('[OneSignal] Init error:', err);
+        }
       });
     }
   }, []);
