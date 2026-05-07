@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { apiFetch } from '../../lib/api';
 import { useTheme } from '../../hooks/useTheme';
 
-const SESSION_KEY = 'chat_session_id';
+const SESSION_ID_KEY = 'chat_session_id';
 const CHAT_HISTORY_KEY = 'chat_history';
 
-function getSessionId() {
-  let sessionId = localStorage.getItem(SESSION_KEY);
+const getSessionId = () => {
+  let sessionId = localStorage.getItem(SESSION_ID_KEY);
   if (!sessionId) {
     sessionId = `session_${Date.now()}`;
-    localStorage.setItem(SESSION_KEY, sessionId);
+    localStorage.setItem(SESSION_ID_KEY, sessionId);
   }
   return sessionId;
-}
+};
 
 function ChatPage() {
   const [input, setInput] = useState('');
@@ -36,68 +36,46 @@ function ChatPage() {
     scrollToBottom();
   }, [messages, isSending]);
 
-  // Push Notification Subscription
-  const urlBase64ToUint8Array = (base64String) => {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  };
-
-  const subscribeToPush = useCallback(async () => {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Get current subscription if exists
-      let subscription = await registration.pushManager.getSubscription();
-      
-      if (!subscription) {
-        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-        if (!vapidPublicKey) {
-          console.error('VITE_VAPID_PUBLIC_KEY is missing');
-          return;
-        }
-        
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-        });
-      }
-
-      await apiFetch('/chat/subscribe', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId: getSessionId(),
-          subscription
-        })
+  // Browser Notification helper
+  const showLocalNotification = useCallback((title, body) => {
+    if (!('Notification' in window)) return;
+    
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/favicon.svg'
       });
-      console.log('Push Subscribed!');
-    } catch (err) {
-      console.error('Push Subscription failed:', err);
     }
   }, []);
 
   useEffect(() => {
-    if ('Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            subscribeToPush();
-          }
-        });
-      } else if (Notification.permission === 'granted') {
-        subscribeToPush();
-      }
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
-  }, [subscribeToPush]);
+
+    // OneSignal Initialization
+    const initOneSignal = async () => {
+      try {
+        const OneSignal = window.OneSignal || [];
+        await OneSignal.init({
+          appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
+          allowLocalhostAsSecureOrigin: true,
+        });
+        
+        // Link the session ID to OneSignal
+        const sessionId = getSessionId();
+        await OneSignal.login(sessionId);
+        console.log('[OneSignal] Logged in with sessionId:', sessionId);
+      } catch (err) {
+        console.error('[OneSignal] Init error:', err);
+      }
+    };
+
+    if (import.meta.env.VITE_ONESIGNAL_APP_ID) {
+      initOneSignal();
+    }
+  }, []);
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
@@ -339,6 +317,7 @@ function ChatPage() {
       }
 
       if (data?.booking?.success) {
+        showLocalNotification('એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅', `તમારી એપોઇન્ટમેન્ટ ${data.booking.patientName} સાથે ${data.booking.time} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`);
         setMessages((p) => [
           ...p,
           {

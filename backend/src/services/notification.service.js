@@ -1,32 +1,34 @@
-const webpush = require('web-push');
-const { PushSubscription } = require('../models');
-
-// Configure VAPID keys
-webpush.setVapidDetails(
-    process.env.VAPID_EMAIL || 'mailto:admin@healthcare.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
 
 async function sendNotification(sessionId, payload) {
-    try {
-        const subRecord = await PushSubscription.findOne({ where: { sessionId } });
-        if (!subRecord) {
-            console.warn(`[Push] No subscription found for session: ${sessionId}`);
-            return false;
-        }
+    const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID;
+    const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
 
-        const pushConfig = subRecord.subscription;
-        await webpush.sendNotification(pushConfig, JSON.stringify(payload));
-        console.log(`[Push] Notification sent to session: ${sessionId}`);
+    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+        console.log(`[Notification] OneSignal keys missing. Skipping push for session: ${sessionId}`);
+        return true;
+    }
+
+    try {
+        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`
+            },
+            body: JSON.stringify({
+                app_id: ONESIGNAL_APP_ID,
+                include_external_user_ids: [sessionId],
+                headings: { en: payload.title || 'Health Notification' },
+                contents: { en: payload.body || 'You have a new message.' },
+                url: payload.url || '/'
+            })
+        });
+
+        const data = await response.json();
+        console.log(`[OneSignal] Notification response for ${sessionId}:`, data);
         return true;
     } catch (error) {
-        console.error('[Push] Error sending notification:', error);
-        if (error.statusCode === 410 || error.statusCode === 404) {
-            // Subscription has expired or is no longer valid
-            await PushSubscription.destroy({ where: { sessionId } });
-            console.log(`[Push] Invalid subscription removed for session: ${sessionId}`);
-        }
+        console.error(`[OneSignal] Error sending notification to ${sessionId}:`, error);
         return false;
     }
 }

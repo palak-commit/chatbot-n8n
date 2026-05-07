@@ -24,19 +24,9 @@ function startReminderCron() {
             console.log(`[Reminder] Found ${pendingNotifications.length} notifications to send.`);
 
             for (const notif of pendingNotifications) {
-                console.log(`[Reminder] Sending notification ${notif.id} to session ${notif.sessionId}`);
-                
-                const success = await notificationService.sendNotification(notif.sessionId, {
-                    title: notif.title,
-                    body: notif.body,
-                    url: '/'
-                });
-
-                if (success) {
-                    await notif.update({ status: 'sent' });
-                } else {
-                    await notif.update({ status: 'failed' });
-                }
+                console.log(`[Reminder] Local-only mode: not sending VAPID push for ${notif.id}`);
+                // Since VAPID is removed, we just mark it as sent in the DB
+                await notif.update({ status: 'sent' });
             }
 
             // Cleanup: Delete notifications that were sent more than 3 days ago

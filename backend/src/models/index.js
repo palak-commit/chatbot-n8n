@@ -2,7 +2,6 @@ const sequelize = require('../config/db');
 const Doctor = require('./doctorModel');
 const Slot = require('./slotModel');
 const Appointment = require('./appointmentModel');
-const PushSubscription = require('./pushSubscriptionModel');
 const Notification = require('./notificationModel');
 
 Doctor.hasMany(Appointment, { foreignKey: 'doctorId' });
@@ -73,7 +72,6 @@ module.exports = {
     Doctor,
     Slot,
     Appointment,
-    PushSubscription,
     Notification,
     syncAndSeed,
 };

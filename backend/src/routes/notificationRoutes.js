@@ -28,9 +28,11 @@ router.get('/process', async (req, res) => {
         let failedCount = 0;
 
         for (const notif of pendingNotifications) {
+            console.log(`[Cron] Sending OneSignal notification for session: ${notif.sessionId}`);
+            
             const success = await notificationService.sendNotification(notif.sessionId, {
-                title: notif.title,
-                body: notif.body,
+                title: 'Appointment Reminder 📅',
+                body: notif.message,
                 url: '/'
             });
 
@@ -38,7 +40,6 @@ router.get('/process', async (req, res) => {
                 await notif.update({ status: 'sent' });
                 sentCount++;
             } else {
-                await notif.update({ status: 'failed' });
                 failedCount++;
             }
         }
