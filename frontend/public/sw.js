@@ -1,48 +1,47 @@
 /* global clients */
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
 self.addEventListener('push', function(event) {
-  console.log('[SW] push event received', event);
+  console.log('[SW] Push event received');
+  
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {
-    data = { title: 'Notification', body: event.data ? event.data.text() : '' };
+    console.error('[SW] Error parsing push data:', e);
+    data = { title: 'નવું નોટિફિકેશન', body: event.data ? event.data.text() : 'તમારી પાસે એક નવો મેસેજ છે.' };
   }
-  console.log('[SW] push payload', data);
 
   const title = data.title || 'નવું નોટિફિકેશન';
   const options = {
     body: data.body || 'તમારી પાસે એક નવો મેસેજ છે.',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    tag: data.tag || 'healthcare-notif',
-    renotify: true,
-    data: { url: data.url || '/' }
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    data: data.url || '/',
+    vibrate: [100, 50, 100],
+    actions: [
+      { action: 'open', title: 'જુઓ' }
+    ]
   };
 
   event.waitUntil(
     self.registration.showNotification(title, options)
+      .then(() => console.log('[SW] Notification shown successfully'))
+      .catch(err => console.error('[SW] Error showing notification:', err))
   );
 });
 
 self.addEventListener('notificationclick', function(event) {
+  console.log('[SW] Notification clicked');
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cls) => {
-      for (const c of cls) {
-        if ('focus' in c) return c.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
-    })
+    clients.openWindow(event.notification.data)
   );
+});
+
+self.addEventListener('install', (event) => {
+  console.log('[SW] Service Worker installed');
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Service Worker activated');
 });
