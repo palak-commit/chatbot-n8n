@@ -38,17 +38,21 @@ function ChatPage() {
   }, [messages, isSending]);
 
   // Browser Notification helper
-  const showLocalNotification = useCallback((title, body) => {
+  const showLocalNotification = useCallback((title, body, force = false) => {
     if (!('Notification' in window)) return;
     
+    // If not forced, only show if window is hidden/not focused
+    if (!force && !document.hidden && document.hasFocus()) return;
+
     if (Notification.permission === 'granted') {
       try {
         const notification = new Notification(title, {
           body,
           icon: '/icon-192.png',
           badge: '/favicon.svg',
-          tag: 'chat-notification', // Replace previous notification
-          renotify: true
+          tag: force ? `booking-${Date.now()}` : 'chat-notification',
+          renotify: true,
+          silent: false 
         });
         
         notification.onclick = () => {
@@ -330,9 +334,7 @@ function ChatPage() {
       setMessages((p) => [...p, botMessage]);
 
       // Show browser notification for bot reply
-      if (document.hidden || !document.hasFocus()) {
-        showLocalNotification('નવો મેસેજ 📩', botReply.length > 100 ? botReply.substring(0, 97) + '...' : botReply);
-      }
+      showLocalNotification('નવો મેસેજ 📩', botReply.length > 100 ? botReply.substring(0, 97) + '...' : botReply);
 
       // Only speak the bot reply if the user used voice input
       if (ok && currentVoiceLang) {
@@ -340,7 +342,8 @@ function ChatPage() {
       }
 
       if (data?.booking?.success) {
-        showLocalNotification('એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅', `તમારી એપોઇન્ટમેન્ટ ${data.booking.patientName} સાથે ${data.booking.time} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`);
+        // Force show booking confirmation notification
+        showLocalNotification('એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅', `તમારી એપોઇન્ટમેન્ટ ${data.booking.patientName} સાથે ${data.booking.time} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`, true);
         setMessages((p) => [
           ...p,
           {
