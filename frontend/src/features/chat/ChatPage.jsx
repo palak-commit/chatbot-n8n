@@ -24,6 +24,7 @@ function ChatPage() {
   });
   const [isSending, setIsSending] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState('default');
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const { theme, toggle: toggleTheme } = useTheme();
   const messagesEndRef = useRef(null);
@@ -42,10 +43,23 @@ function ChatPage() {
     if (window.OneSignal) {
       window.OneSignal.push(() => {
         window.OneSignal.login(sessionId);
-        console.log('[OneSignal] Logged in with sessionId:', sessionId);
+        setNotificationPermission(window.OneSignal.Notifications.permissionNative);
+        
+        // Listen for permission changes
+        window.OneSignal.Notifications.addEventListener('permissionChange', (permission) => {
+          setNotificationPermission(permission ? 'granted' : 'denied');
+        });
       });
     }
   }, []);
+
+  const handleNotificationClick = () => {
+    if (window.OneSignal) {
+      window.OneSignal.push(() => {
+        window.OneSignal.Notifications.requestPermission();
+      });
+    }
+  };
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
@@ -346,6 +360,26 @@ function ChatPage() {
         </div>
         <div className="flex items-center gap-1">
           <button
+            onClick={handleNotificationClick}
+            className={`rounded-xl p-2 transition-colors ${
+              notificationPermission === 'granted' 
+                ? 'text-green-500 cursor-default' 
+                : 'text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-400'
+            }`}
+            title={notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
+          >
+            {notificationPermission === 'granted' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            )}
+          </button>
+          <button
             onClick={toggleTheme}
             className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-blue-500 transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-400"
             title="Toggle theme"
@@ -362,9 +396,9 @@ function ChatPage() {
           </button>
           <button
             onClick={() => {
-              if(confirm('Chhat history clear karvi che?')) {
+              if(confirm('Are you sure you want to clear chat history?')) {
                 setMessages([{ id: Date.now(), role: 'bot', text: 'Hello! Hu tamaro chatbot assistant chu. Shu help joiye?' }]);
-                localStorage.removeItem('chat_history');
+                localStorage.removeItem(CHAT_HISTORY_KEY);
               }
             }}
             className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-red-500 transition-colors dark:text-slate-400 dark:hover:bg-slate-800"
