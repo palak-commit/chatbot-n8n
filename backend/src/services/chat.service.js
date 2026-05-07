@@ -1,8 +1,9 @@
-const memory = require('./chatMemory.service');
-const n8n = require('./n8n.service');
 const booking = require('./booking.service');
+const n8n = require('./n8n.service');
+const memory = require('./chatMemory.service');
 const vector = require('./vector.service');
 const { Appointment } = require('../models');
+const notificationService = require('./notification.service');
 const { extractPatientNameFromMessage, isLikelyName } = require('../utils/nameExtractor');
 const { parseAgentReply } = require('../utils/parseAgentReply');
 
@@ -80,6 +81,16 @@ async function handleChatMessage({ message, sessionId, doctor: inputDoctor, avai
 
     const responseText = await n8nResponse.text();
     const payload = parseAgentReply(responseText);
+
+    // Send OneSignal notification for the chatbot response
+    if (payload.reply && normalizedSessionId) {
+        notificationService.sendNotification({
+            message: payload.reply.length > 100 ? payload.reply.substring(0, 97) + '...' : payload.reply,
+            title: 'નવો મેસેજ',
+            externalId: normalizedSessionId,
+            data: { sessionId: normalizedSessionId }
+        }).catch(err => console.error('[Notification] Chat response error:', err));
+    }
 
     const memBefore = memory.getSession(normalizedSessionId);
     const candidateName = payload.patientName || payload.booking?.patientName || '';

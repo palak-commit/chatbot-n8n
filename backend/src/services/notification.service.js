@@ -31,6 +31,7 @@ async function sendNotification({ message, title = 'Appointment Update', externa
     }
 
     try {
+        console.log(`[OneSignal] Sending notification to ${externalId || 'all users'}: "${message.substring(0, 20)}..."`);
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
             method: 'POST',
             headers: {
@@ -41,7 +42,11 @@ async function sendNotification({ message, title = 'Appointment Update', externa
         });
 
         const result = await response.json();
-        console.log('[OneSignal] Notification response:', result);
+        if (result.errors) {
+            console.error('[OneSignal] API Errors:', result.errors);
+        } else {
+            console.log('[OneSignal] Success! Notification ID:', result.id, 'Recipients:', result.recipients);
+        }
         return result;
     } catch (error) {
         console.error('[OneSignal] Error sending notification:', error);
