@@ -37,12 +37,11 @@ async function sendNotification(sessionId, payload) {
             console.error(`[OneSignal] ${response.status} for ${sessionId}:`, raw);
             return false;
         }
-        const recipients = data.recipients ?? 'unknown';
-        if (recipients === 0) {
+        if (typeof data.recipients === 'number' && data.recipients === 0) {
             console.warn(`[OneSignal] 0 recipients for ${sessionId} — external_id not linked to a Subscribed user. id=${data.id}`);
             return false;
         }
-        console.log(`[OneSignal] Sent to ${recipients} for ${sessionId}: id=${data.id}`);
+        console.log(`[OneSignal] Notification accepted for ${sessionId}: id=${data.id}`);
         return true;
     } catch (error) {
         console.error(`[OneSignal] Error sending notification to ${sessionId}:`, error);
