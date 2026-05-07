@@ -12,10 +12,13 @@
         OneSignal.init({
           appId: "30435956-71bd-428a-a386-8768ef95efa2",
           safari_web_id: "web.onesignal.auto.10435956-71bd-428a-a386-8768ef95efa2",
+          allowLocalhostAsSecure: true,
           notifyButton: {
-            enable: true,
+            enable: false, // Bell icon બંધ કર્યું
           },
         });
+        // સીધું નેટિવ પ્રોમ્પ્ટ બતાવવા માટે
+        OneSignal.Notifications.requestPermission();
       });
     </script>
     <script>
