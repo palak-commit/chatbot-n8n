@@ -40,45 +40,40 @@ function ChatPage() {
   // OneSignal External ID Setup
   useEffect(() => {
     const sessionId = getSessionId();
-    if (window.OneSignal) {
-      window.OneSignal.push(async () => {
-        try {
-          await window.OneSignal.init({
-            appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
-            safari_web_id: "web.onesignal.auto.10435956-71bd-428a-a386-8768ef95efa2",
-            notifyButton: {
-              enable: false,
-            },
-            allowLocalhostAsSecure: true,
-          });
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        await OneSignal.init({
+          appId: import.meta.env.VITE_ONESIGNAL_APP_ID,
+          safari_web_id: "web.onesignal.auto.10435956-71bd-428a-a386-8768ef95efa2",
+          notifyButton: {
+            enable: false,
+          },
+          allowLocalhostAsSecure: true,
+        });
 
-          await window.OneSignal.login(sessionId);
-          
-          const checkPermission = () => {
-            setNotificationPermission(window.OneSignal.Notifications.permission ? 'granted' : 'default');
-          };
-          checkPermission();
-          
-          window.OneSignal.Notifications.addEventListener('permissionChange', (isOptedIn) => {
-            setNotificationPermission(isOptedIn ? 'granted' : 'denied');
-          });
-        } catch (err) {
-          console.error('[OneSignal] Init error:', err);
-        }
-      });
-    }
+        await OneSignal.login(sessionId);
+
+        setNotificationPermission(OneSignal.Notifications.permission ? 'granted' : 'default');
+
+        OneSignal.Notifications.addEventListener('permissionChange', (isOptedIn) => {
+          setNotificationPermission(isOptedIn ? 'granted' : 'denied');
+        });
+      } catch (err) {
+        console.error('[OneSignal] Init error:', err);
+      }
+    });
   }, []);
 
   const handleNotificationClick = () => {
-    if (window.OneSignal) {
-      window.OneSignal.push(async () => {
-        try {
-          await window.OneSignal.Notifications.requestPermission();
-        } catch (err) {
-          console.error('[OneSignal] Permission request error:', err);
-        }
-      });
-    }
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        await OneSignal.Notifications.requestPermission();
+      } catch (err) {
+        console.error('[OneSignal] Permission request error:', err);
+      }
+    });
   };
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
