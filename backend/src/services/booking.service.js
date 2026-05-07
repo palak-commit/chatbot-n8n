@@ -1,4 +1,4 @@
-const { Appointment, Slot, Doctor, Notification } = require('../models');
+const { Appointment, Slot, Doctor } = require('../models');
 
 function normalize(value) {
     return String(value || '').trim().toLowerCase();
@@ -211,54 +211,6 @@ async function createAppointmentIfRequested(booking, sessionId = null) {
     );
 
     console.log(`[Booking] Appointment created with ID: ${appointment.id}`);
-
-    // Create instant notification for the booking
-    try {
-        await Notification.create({
-            title: 'એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅',
-            message: `તમારી એપોઇન્ટમેન્ટ ${appointment.patientName} સાથે ${appointment.appointmentTime} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`,
-            status: 'sent',
-            scheduleDate: appointment.appointmentDate,
-            scheduleTime: appointment.appointmentTime,
-            sessionId: sessionId
-        });
-
-        // Calculate reminder time (30 minutes before)
-        // appointment.appointmentTime is usually like "03:00 PM"
-        // appointment.appointmentDate is usually like "2026-05-08"
-        const timeStr = appointment.appointmentTime;
-        const dateStr = appointment.appointmentDate;
-        
-        if (dateStr && timeStr) {
-            const [time, modifier] = timeStr.split(' ');
-            let [hours, minutes] = time.split(':');
-            if (hours === '12') hours = '00';
-            if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-            
-            const appointmentDateTime = new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${minutes}:00`);
-            const reminderDateTime = new Date(appointmentDateTime.getTime() - 30 * 60000);
-            
-            console.log(`[Notification] Instant notification created: "${appointment.appointmentTime}"`);
-            
-            const reminderDate = reminderDateTime.toISOString().split('T')[0];
-            const reminderTime = reminderDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-            console.log(`[Notification] Scheduling reminder for: ${reminderDate} at ${reminderTime} (30 mins before ${appointment.appointmentTime})`);
-
-            await Notification.create({
-                title: 'એપોઇન્ટમેન્ટ રીમાઇન્ડર ⏰',
-                message: `તમારી એપોઇન્ટમેન્ટ 30 મિનિટમાં ${appointment.appointmentTime} વાગ્યે છે.`,
-                status: 'pending',
-                scheduleDate: reminderDate,
-                scheduleTime: reminderTime,
-                sessionId: sessionId
-            });
-        }
-        
-        console.log('[Booking] Notifications created for appointment');
-    } catch (err) {
-        console.error('[Booking] Error creating notifications:', err);
-    }
 
     return {
         success: true,

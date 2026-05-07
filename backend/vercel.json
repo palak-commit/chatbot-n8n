@@ -19,11 +19,5 @@
       "src": "/",
       "dest": "/src/server.js"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/notifications/process",
-      "schedule": "* * * * *"
-    }
   ]
 }
