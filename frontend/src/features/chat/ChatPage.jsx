@@ -43,11 +43,17 @@ function ChatPage() {
     if (window.OneSignal) {
       window.OneSignal.push(() => {
         window.OneSignal.login(sessionId);
-        setNotificationPermission(window.OneSignal.Notifications.permissionNative);
         
-        // Listen for permission changes
-        window.OneSignal.Notifications.addEventListener('permissionChange', (permission) => {
-          setNotificationPermission(permission ? 'granted' : 'denied');
+        // Use the correct v16 API for checking permission
+        const checkPermission = () => {
+          setNotificationPermission(window.OneSignal.Notifications.permission ? 'granted' : 'default');
+        };
+
+        checkPermission();
+        
+        // Correct event listener for v16
+        window.OneSignal.Notifications.addEventListener('permissionChange', (isOptedIn) => {
+          setNotificationPermission(isOptedIn ? 'granted' : 'denied');
         });
       });
     }
@@ -55,8 +61,12 @@ function ChatPage() {
 
   const handleNotificationClick = () => {
     if (window.OneSignal) {
-      window.OneSignal.push(() => {
-        window.OneSignal.Notifications.requestPermission();
+      window.OneSignal.push(async () => {
+        try {
+          await window.OneSignal.Notifications.requestPermission();
+        } catch (err) {
+          console.error('[OneSignal] Permission request error:', err);
+        }
       });
     }
   };
