@@ -8,12 +8,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', function(event) {
+  console.log('[SW] push event received', event);
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {
     data = { title: 'Notification', body: event.data ? event.data.text() : '' };
   }
+  console.log('[SW] push payload', data);
 
   const title = data.title || 'નવું નોટિફિકેશન';
   const options = {
