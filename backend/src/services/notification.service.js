@@ -15,7 +15,7 @@ async function sendNotification(sessionId, payload) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`
+                'Authorization': `Key ${ONESIGNAL_REST_API_KEY}`
             },
             body: JSON.stringify({
                 app_id: ONESIGNAL_APP_ID,
@@ -29,11 +29,12 @@ async function sendNotification(sessionId, payload) {
             })
         });
 
-        const data = await response.json();
-        if (data.errors && data.errors.length > 0) {
-            console.error(`[OneSignal] Error response for ${sessionId}:`, data.errors);
-            // If it still fails with 403, we might need to try 'Key' again but with include_aliases
-            // However, let's try 'Basic' first as it's the standard for REST APIs
+        const raw = await response.text();
+        let data = {};
+        try { data = JSON.parse(raw); } catch (_) {}
+
+        if (!response.ok || (data.errors && data.errors.length > 0)) {
+            console.error(`[OneSignal] ${response.status} for ${sessionId}:`, raw);
             return false;
         }
         console.log(`[OneSignal] Notification success for ${sessionId}:`, data);
