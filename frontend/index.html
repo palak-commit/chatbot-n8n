@@ -12,13 +12,18 @@
         OneSignal.init({
           appId: "30435956-71bd-428a-a386-8768ef95efa2",
           safari_web_id: "web.onesignal.auto.10435956-71bd-428a-a386-8768ef95efa2",
-          allowLocalhostAsSecure: true,
           notifyButton: {
-            enable: false, // Bell icon બંધ કર્યું
+            enable: false,
           },
+        }).then(() => {
+          console.log("OneSignal Initialized");
+          // જો પરમિશન હજુ નથી મળી, તો જ પ્રોમ્પ્ટ બતાવો
+          if (OneSignal.Notifications.permissionNative !== 'granted') {
+             setTimeout(() => {
+                OneSignal.Notifications.requestPermission().catch(e => console.error("Prompt Error:", e));
+             }, 1000);
+          }
         });
-        // સીધું નેટિવ પ્રોમ્પ્ટ બતાવવા માટે
-        OneSignal.Notifications.requestPermission();
       });
     </script>
     <script>
