@@ -26,6 +26,8 @@ function ChatPage() {
   const [isListening, setIsListening] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
   const [notificationPermission, setNotificationPermission] = useState('Notification' in window ? Notification.permission : 'denied');
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationList, setShowNotificationList] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
   const messagesEndRef = useRef(null);
 
@@ -39,13 +41,22 @@ function ChatPage() {
 
   // Browser Notification helper
   const showLocalNotification = useCallback((title, body, force = false) => {
-    if (!('Notification' in window)) return;
+    console.log(`[Notification Log] showLocalNotification called: title="${title}", force=${force}`);
+    if (!('Notification' in window)) {
+      console.log('[Notification Log] Notification not supported in this browser');
+      return;
+    }
     
     // If not forced, only show if window is hidden/not focused
-    if (!force && !document.hidden && document.hasFocus()) return;
+    if (!force && !document.hidden && document.hasFocus()) {
+      console.log('[Notification Log] Skipping notification: Window is focused and not forced');
+      return;
+    }
 
+    console.log(`[Notification Log] Permission status: ${Notification.permission}`);
     if (Notification.permission === 'granted') {
       try {
+        console.log(`[Notification Log] Creating new Notification object for: "${title}"`);
         const notification = new Notification(title, {
           body,
           icon: '/icon-192.png',
@@ -55,13 +66,19 @@ function ChatPage() {
           silent: false 
         });
         
+        notification.onshow = () => console.log(`[Notification Log] Notification actually DISPLAYED: "${title}"`);
+        notification.onerror = (err) => console.error('[Notification Log] Notification object ERROR:', err);
+        
         notification.onclick = () => {
+          console.log(`[Notification Log] Notification CLICKED: "${title}"`);
           window.focus();
           notification.close();
         };
       } catch (err) {
-        console.error('Notification error:', err);
+        console.error('[Notification Log] Exception during notification creation:', err);
       }
+    } else {
+      console.warn(`[Notification Log] Cannot show notification: Permission is ${Notification.permission}`);
     }
   }, []);
 
@@ -79,12 +96,58 @@ function ChatPage() {
     }
   }, [showLocalNotification]);
 
-  useEffect(() => {
-    // Check permission on mount
-    if ('Notification' in window) {
-      // No need to set state here as it's already initialized in useState
+  const fetchNotifications = useCallback(async () => {
+    try {
+      console.log('[Notification Log] Fetching notifications for session:', getSessionId());
+      const { ok, data } = await apiFetch(`/notifications?sessionId=${getSessionId()}`);
+      if (ok && data.notifications) {
+        console.log(`[Notification Log] Received ${data.notifications.length} notifications`);
+        setNotifications(data.notifications);
+        
+        // Check for pending notifications that need to be shown now
+        const now = new Date();
+        data.notifications.forEach(n => {
+          if (n.status === 'pending' && n.scheduleDate && n.scheduleTime) {
+            const [time, modifier] = n.scheduleTime.split(' ');
+            let [hours, minutes] = time.split(':');
+            if (hours === '12') hours = '00';
+            if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+            
+            const scheduledTime = new Date(`${n.scheduleDate}T${String(hours).padStart(2, '0')}:${minutes}:00`);
+            
+            console.log(`[Notification Log] Checking pending: "${n.title}" scheduled for ${n.scheduleDate} ${n.scheduleTime}. Current time: ${now.toLocaleString()}`);
+
+            // If scheduled time is now or has passed, show it
+            if (scheduledTime <= now) {
+              console.log(`[Notification Log] TRIGGERING notification: "${n.title}"`);
+              showLocalNotification(n.title, n.message, true);
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[Notification Log] Error:', err);
     }
-  }, []);
+  }, [showLocalNotification]);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const load = async () => {
+      if (isMounted) await fetchNotifications();
+    };
+    
+    load();
+    
+    const interval = setInterval(() => {
+      if (isMounted) fetchNotifications();
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [fetchNotifications]);
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
@@ -344,6 +407,9 @@ function ChatPage() {
       if (data?.booking?.success) {
         // Force show booking confirmation notification
         showLocalNotification('એપોઇન્ટમેન્ટ કન્ફર્મ થઈ ગઈ છે! ✅', `તમારી એપોઇન્ટમેન્ટ ${data.booking.patientName} સાથે ${data.booking.time} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`, true);
+        
+        // Refresh notifications list from backend
+        fetchNotifications();
         setMessages((p) => [
           ...p,
           {
@@ -394,27 +460,66 @@ function ChatPage() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={requestNotificationPermission}
-            className={`rounded-xl p-2 transition-colors ${
-              notificationPermission === 'granted' 
-                ? 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20' 
-                : notificationPermission === 'denied'
-                ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800'
-            }`}
-            title={`Notifications: ${notificationPermission}`}
-          >
-            {notificationPermission === 'granted' ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowNotificationList(!showNotificationList)}
+              className="rounded-xl p-2 transition-colors relative text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+              title="Notifications"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
               </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
+            </button>
+
+            {showNotificationList && (
+              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-2 shadow-xl z-50 dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-50 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Notifications</h3>
+                  <button 
+                    onClick={requestNotificationPermission}
+                    className="text-[10px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    Permission: {notificationPermission}
+                  </button>
+                </div>
+                <div className="mt-2 space-y-1">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
+                      No notifications yet
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div 
+                        key={n.id} 
+                        className="rounded-xl p-3 text-left transition-colors bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white">{n.title}</p>
+                          {n.status && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                              n.status === 'sent' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            }`}>
+                              {n.status}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-[11px] leading-relaxed text-gray-600 dark:text-slate-400">{n.message}</p>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          {n.scheduleDate && (
+                            <p className="text-[9px] font-medium text-blue-600 dark:text-blue-400">
+                              📅 {n.scheduleDate} | 🕒 {n.scheduleTime}
+                            </p>
+                          )}
+                          <p className="text-[9px] text-gray-400">{new Date(n.createdAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
-          </button>
+          </div>
           <button
             onClick={toggleTheme}
             className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-blue-500 transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-400"
