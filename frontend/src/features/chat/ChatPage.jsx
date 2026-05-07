@@ -36,6 +36,17 @@ function ChatPage() {
     scrollToBottom();
   }, [messages, isSending]);
 
+  // OneSignal External ID Setup
+  useEffect(() => {
+    const sessionId = getSessionId();
+    if (window.OneSignal) {
+      window.OneSignal.push(() => {
+        window.OneSignal.login(sessionId);
+        console.log('[OneSignal] Logged in with sessionId:', sessionId);
+      });
+    }
+  }, []);
+
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
     // Clean text and format dates for natural speech

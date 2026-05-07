@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Appointment, Doctor, Slot } = require('../models');
+const notificationService = require('./notification.service');
 
 function normalizeTime(value) {
     if (!value) return value;
@@ -148,6 +149,16 @@ async function createAppointment({ patientName, doctorName, doctorId, appointmen
         { where: { doctorId: resolvedDoctorId, date: finalDate, time: finalTime } },
     );
 
+    // Send OneSignal notification if appointment is confirmed
+    if (appointment.status === 'confirmed' && sessionId) {
+        notificationService.sendNotification({
+            message: `તમારી એપોઈન્ટમેન્ટ ${finalDate} ના રોજ ${finalTime} વાગ્યે કન્ફર્મ થઈ ગઈ છે.`,
+            title: 'એપોઈન્ટમેન્ટ કન્ફર્મ!',
+            externalId: sessionId,
+            data: { appointmentId: appointment.id }
+        }).catch(err => console.error('[Notification] Error sending on create:', err));
+    }
+
     return appointment;
 }
 
@@ -208,6 +219,17 @@ async function updateAppointment(id, data) {
     }
 
     await appointment.save();
+
+    // Send OneSignal notification if appointment is confirmed
+    if (appointment.status === 'confirmed' && appointment.sessionId) {
+        notificationService.sendNotification({
+            message: `તમારી એપોઈન્ટમેન્ટ અપડેટ થઈ ગઈ છે: ${appointment.appointmentDate} @ ${appointment.appointmentTime}`,
+            title: 'એપોઈન્ટમેન્ટ અપડેટ!',
+            externalId: appointment.sessionId,
+            data: { appointmentId: appointment.id }
+        }).catch(err => console.error('[Notification] Error sending on update:', err));
+    }
+
     return appointment;
 }
 

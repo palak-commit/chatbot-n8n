@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HealthCare Clinic Assistant</title>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.SDK.js" defer></script>
+    <script>
+      window.OneSignal = window.OneSignal || [];
+      OneSignal.push(() => {
+        OneSignal.init({
+          appId: "30435956-71bd-428a-a386-8768ef95efa2",
+          safari_web_id: "web.onesignal.auto.10435956-71bd-428a-a386-8768ef95efa2",
+          notifyButton: {
+            enable: true,
+          },
+        });
+      });
+    </script>
     <script>
       (function () {
         var t = localStorage.getItem('theme');
