@@ -25,9 +25,7 @@ function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
-  const [notificationPermission, setNotificationPermission] = useState(() => {
-    return 'Notification' in window ? Notification.permission : 'default';
-  });
+  const [notificationPermission, setNotificationPermission] = useState('Notification' in window ? Notification.permission : 'denied');
   const { theme, toggle: toggleTheme } = useTheme();
   const messagesEndRef = useRef(null);
 
@@ -44,29 +42,45 @@ function ChatPage() {
     if (!('Notification' in window)) return;
     
     if (Notification.permission === 'granted') {
-      new Notification(title, {
-        body,
-        icon: '/favicon.svg',
-        badge: '/favicon.svg'
-      });
+      try {
+        const notification = new Notification(title, {
+          body,
+          icon: '/icon-192.png',
+          badge: '/favicon.svg',
+          tag: 'chat-notification', // Replace previous notification
+          renotify: true
+        });
+        
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      } catch (err) {
+        console.error('Notification error:', err);
+      }
     }
   }, []);
 
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      alert('તમારા બ્રાઉઝરમાં નોટિફિકેશન સપોર્ટ નથી.');
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
+  const requestNotificationPermission = useCallback(async () => {
+    if (!('Notification' in window)) return;
     
-    if (permission === 'granted') {
-      showLocalNotification('નોટિફિકેશન ચાલુ થઈ ગયા છે! ✅', 'હવે તમને એપોઇન્ટમેન્ટની અપડેટ્સ મળતી રહેશે.');
-    } else if (permission === 'denied') {
-      alert('નોટિફિકેશન બ્લોક કરવામાં આવ્યા છે. કૃપા કરીને બ્રાઉઝર સેટિંગ્સમાં જઈને તેને "Allow" કરો.');
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        showLocalNotification('નોટિફિકેશન ચાલુ થઈ ગઈ છે! 🔔', 'તમને હવે નવા મેસેજની નોટિફિકેશન મળશે.');
+      }
+    } catch (err) {
+      console.error('Permission request error:', err);
     }
-  };
+  }, [showLocalNotification]);
+
+  useEffect(() => {
+    // Check permission on mount
+    if ('Notification' in window) {
+      // No need to set state here as it's already initialized in useState
+    }
+  }, []);
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
@@ -284,6 +298,11 @@ function ChatPage() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     
+    // Request notification permission on first message if not already granted/denied
+    if (notificationPermission === 'default') {
+      requestNotificationPermission();
+    }
+
     const currentVoiceLang = voiceLanguage;
     setVoiceLanguage(null);
 
@@ -309,6 +328,11 @@ function ChatPage() {
 
       // Update bot message with a unique ID based on the user message timestamp
       setMessages((p) => [...p, botMessage]);
+
+      // Show browser notification for bot reply
+      if (document.hidden || !document.hasFocus()) {
+        showLocalNotification('નવો મેસેજ 📩', botReply.length > 100 ? botReply.substring(0, 97) + '...' : botReply);
+      }
 
       // Only speak the bot reply if the user used voice input
       if (ok && currentVoiceLang) {
@@ -372,18 +396,19 @@ function ChatPage() {
             className={`rounded-xl p-2 transition-colors ${
               notificationPermission === 'granted' 
                 ? 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20' 
-                : 'text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-400'
+                : notificationPermission === 'denied'
+                ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800'
             }`}
-            title={notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
+            title={`Notifications: ${notificationPermission}`}
           >
             {notificationPermission === 'granted' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
               </svg>
             ) : (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 10l4 4m0-4l-4 4" />
               </svg>
             )}
           </button>
