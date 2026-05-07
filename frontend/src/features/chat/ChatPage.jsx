@@ -25,6 +25,9 @@ function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState(null); // Stores the language used for voice input
+  const [notificationPermission, setNotificationPermission] = useState(() => {
+    return 'Notification' in window ? Notification.permission : 'default';
+  });
   const { theme, toggle: toggleTheme } = useTheme();
   const messagesEndRef = useRef(null);
 
@@ -43,17 +46,27 @@ function ChatPage() {
     if (Notification.permission === 'granted') {
       new Notification(title, {
         body,
-        icon: '/icon-192.png',
+        icon: '/favicon.svg',
         badge: '/favicon.svg'
       });
     }
   }, []);
 
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      alert('તમારા બ્રાઉઝરમાં નોટિફિકેશન સપોર્ટ નથી.');
+      return;
     }
-  }, []);
+
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    
+    if (permission === 'granted') {
+      showLocalNotification('નોટિફિકેશન ચાલુ થઈ ગયા છે! ✅', 'હવે તમને એપોઇન્ટમેન્ટની અપડેટ્સ મળતી રહેશે.');
+    } else if (permission === 'denied') {
+      alert('નોટિફિકેશન બ્લોક કરવામાં આવ્યા છે. કૃપા કરીને બ્રાઉઝર સેટિંગ્સમાં જઈને તેને "Allow" કરો.');
+    }
+  };
 
   // Text-to-Speech (TTS) Setup using ElevenLabs with fallback to Google Translate
   const speak = useCallback(async (text, lang = 'gu-IN') => {
@@ -354,6 +367,26 @@ function ChatPage() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={requestNotificationPermission}
+            className={`rounded-xl p-2 transition-colors ${
+              notificationPermission === 'granted' 
+                ? 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20' 
+                : 'text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-400'
+            }`}
+            title={notificationPermission === 'granted' ? 'Notifications Enabled' : 'Enable Notifications'}
+          >
+            {notificationPermission === 'granted' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 10l4 4m0-4l-4 4" />
+              </svg>
+            )}
+          </button>
           <button
             onClick={toggleTheme}
             className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-blue-500 transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-blue-400"
